@@ -4,6 +4,7 @@
 Drive an attacker (curated seed payloads and/or any LLM) against a target, prove impact
 with per-run canaries, and get a report mapped to the **OWASP LLM Top 10** and MITRE ATLAS.
 
+[![PyPI](https://img.shields.io/pypi/v/aphasia-agentry)](https://pypi.org/project/aphasia-agentry/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](engine/pyproject.toml)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-8A2BE2)](docs/scenarios.md)
