@@ -1,8 +1,4 @@
-from pathlib import Path
-
-from aphasia.scenarios import REGISTRY, load_yaml
-
-YAML = Path(__file__).resolve().parents[2] / "scenarios.yaml"
+from aphasia.scenarios import DEFAULT_PATH as YAML, REGISTRY, load_yaml
 
 ALL_IDS = ["direct_injection", "indirect_injection", "tool_misuse", "data_exfil",
            "mcp_tool_poisoning", "memory_poisoning", "output_handling", "system_prompt_leak",

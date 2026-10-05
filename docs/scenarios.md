@@ -1,6 +1,6 @@
 # Scenarios
 
-Defined in `scenarios.yaml`. Each is judged by canary/mirror evidence, not by the model's claims.
+Defined in `engine/src/aphasia/data/scenarios.yaml`. Each is judged by canary/mirror evidence, not by the model's claims.
 
 | id | ATLAS | OWASP | What it proves |
 |----|-------|-------|----------------|

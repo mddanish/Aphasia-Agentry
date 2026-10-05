@@ -27,8 +27,10 @@ def base_url():
 
 
 def test_seed_mode_cracks_fixture(base_url, tmp_path):
-    scs = load_yaml(OSS / "scenarios.yaml")
-    payloads = load_payloads(OSS / "payloads.yaml")
+    from aphasia.scenarios import DEFAULT_PATH as SCENARIOS
+    from aphasia.payloads import DEFAULT_PATH as PAYLOADS
+    scs = load_yaml(SCENARIOS)
+    payloads = load_payloads(PAYLOADS)
     conn = HttpConnector(base_url + "/chat", plant_url=base_url + "/seed")
     res = run_all(scs, conn, provider=None, run_dir=tmp_path, mode="seed", payloads=payloads)
     proven = [r for r in res.results if r.verdict in ("success", "metered")]

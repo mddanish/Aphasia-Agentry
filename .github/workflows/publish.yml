@@ -1,0 +1,20 @@
+name: publish
+# Publishes aphasia-agentry to PyPI when a GitHub Release is published.
+# Uses PyPI Trusted Publishing (OIDC) — no API token. Configure the trusted
+# publisher on PyPI first: project aphasia-agentry, workflow publish.yml.
+on:
+  release:
+    types: [published]
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write        # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: cd engine && uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: engine/dist

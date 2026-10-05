@@ -13,7 +13,7 @@
 
        cd engine && uv run aphasia run --mode seed
 
-   This drives the attacker from the curated seed-payload library (`payloads.yaml`)
+   This drives the attacker from the curated seed-payload library
    instead of an LLM. Against the bundled fixture it proves all OWASP LLM Top 10
    categories deterministically. See the library with `uv run aphasia payloads`.
 

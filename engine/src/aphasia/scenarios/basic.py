@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from importlib.resources import files
 
 import yaml
 
@@ -28,3 +29,11 @@ def load_yaml(path) -> list[Scenario]:
     for s in scenarios:
         register(s)
     return scenarios
+
+
+DEFAULT_PATH = files("aphasia").joinpath("data/scenarios.yaml")
+
+
+def load_default():
+    """Load the scenarios shipped with the package."""
+    return load_yaml(DEFAULT_PATH)

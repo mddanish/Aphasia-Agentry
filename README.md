@@ -15,6 +15,16 @@ with per-run canaries, and get a report mapped to the **OWASP LLM Top 10** and M
 > **INTENTIONALLY VULNERABLE.** The fixture in `fixture/` is for authorized, self-hosted
 > testing only. Run it on localhost; never expose it to a network.
 
+## Install
+
+    uvx aphasia-agentry --help          # run without installing
+    pipx install aphasia-agentry        # or: pip install aphasia-agentry
+
+From source:
+
+    git clone https://github.com/mddanish/Aphasia-Agentry
+    cd Aphasia-Agentry/engine && uv run aphasia --help
+
 ## Why
 
 Most agent red-teaming grades a model's *output* with an LLM judge. Aphasia Agentry asks a
@@ -44,6 +54,14 @@ Add an adaptive LLM attacker (the `--model` string selects the provider):
 
 `--mode hybrid` (default) runs the seeds first, then the LLM adapts. See `aphasia --help`,
 `docs/quickstart.md` and `docs/scenarios.md`.
+
+### Demo
+
+Record the seed-mode run as a GIF (`docs/demo.sh` has the sequence):
+
+    asciinema rec demo.cast -c "bash docs/demo.sh" && agg demo.cast docs/assets/demo.gif
+
+<!-- ![demo](docs/assets/demo.gif) -->
 
 ## How it works
 
@@ -90,10 +108,10 @@ step-by-step timeline, and a concrete fix.
 ## Project layout
 
     engine/     the aphasia Python package (CLI, attacker, connectors, canary/mirror, report)
+      src/aphasia/data/scenarios.yaml   the 11 OWASP LLM Top 10 scenarios
+      src/aphasia/data/payloads.yaml    the curated seed-payload library
     fixture/    the deliberately-vulnerable HTTP agent + MCP server (Docker, localhost only)
-    scenarios.yaml   the 11 OWASP LLM Top 10 scenarios
-    payloads.yaml    the curated seed-payload library
-    docs/       quickstart, scenarios, assets
+    docs/       quickstart, scenarios, demo script, assets
 
 ## Contributing
 

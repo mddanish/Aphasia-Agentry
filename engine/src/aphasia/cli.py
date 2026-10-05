@@ -12,14 +12,12 @@ except PackageNotFoundError:  # running from source without an install
     __version__ = "0+unknown"
 
 from aphasia.connectors import ConnectorError, HttpConnector, McpConnector
-from aphasia.payloads import load_payloads
+from aphasia.payloads import DEFAULT_PATH as PAYLOADS, load_payloads
 from aphasia.providers import LiteLLMProvider, ProviderError
 from aphasia.report import load_report, write_report
 from aphasia.run import run_all
-from aphasia.scenarios import load_yaml
+from aphasia.scenarios import DEFAULT_PATH as SCENARIOS, load_yaml
 
-SCENARIOS = Path(__file__).resolve().parents[3] / "scenarios.yaml"  # oss/scenarios.yaml
-PAYLOADS = Path(__file__).resolve().parents[3] / "payloads.yaml"    # oss/payloads.yaml
 FIXTURE = "http://127.0.0.1:8000"
 
 

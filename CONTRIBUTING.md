@@ -12,7 +12,7 @@ contributions — they directly widen attack coverage.
 
 ## Add a seed payload
 
-Edit `payloads.yaml`: add realistic known-bad strings under the matching scenario id. Order
+Edit `engine/src/aphasia/data/payloads.yaml`: add realistic known-bad strings under the matching scenario id. Order
 matters for multi-phase scenarios (e.g. `memory_poisoning` plants on the first turn, recalls
 on a later one). Only add payloads you have the right to redistribute under Apache-2.0 — the
 library is a project-owned starter set, not a copy of an externally-licensed corpus.
@@ -24,11 +24,11 @@ Verify locally against the bundled fixture:
 
 ## Add a scenario
 
-1. Add an entry to `scenarios.yaml` (id, category, channel, goal, success_condition, atlas, owasp).
+1. Add an entry to `engine/src/aphasia/data/scenarios.yaml` (id, category, channel, goal, success_condition, atlas, owasp).
 2. Give the fixture a deliberately-vulnerable, **sandbox-inert** surface for it in
    `fixture/agent/app.py` (string/dict ops only — no disk/exec/env/network) and a test in
    `fixture/tests/test_agent_sandbox.py`.
-3. Add seed payloads in `payloads.yaml`.
+3. Add seed payloads in `engine/src/aphasia/data/payloads.yaml`.
 4. If it maps to a MITRE ATLAS technique, add the id + display name in `engine/src/aphasia/report/render.py`.
 
 ## Rules
