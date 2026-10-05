@@ -75,6 +75,8 @@ The report (`report.html` / `report.json`) shows, per scenario: the attack, its 
 mapping, the canary-backed proof (winning payload, target reply, captured tool call), a
 step-by-step timeline, and a concrete fix.
 
+![Report scroll-through](docs/assets/report-scroll.gif)
+
 ## Coverage (OWASP LLM Top 10)
 
 | OWASP | Scenario | ATLAS |
