@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Aphasia Agentry report $run_id</title>
+<style>
+:root{--bg:#0f1115;--card:#1a1d24;--line:#2b2f3a;--txt:#e6e8ec;--mut:#9aa3b2;
+  --red:#ff6b6b;--amber:#ffb454;--green:#4ec9a5;--blue:#5aa8ff}
+body{font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:var(--bg);color:var(--txt)}
+.wrap{max-width:880px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mut);font-size:12px;margin:0 0 20px}
+.scoreboard{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 24px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:120px}
+.tile .n{font-size:26px;font-weight:700}
+.tile .l{color:var(--mut);font-size:12px}
+.tile.score .n{color:var(--amber)}
+.tile.exploited .n{color:var(--red)}
+.card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:10px;padding:16px 18px;margin:0 0 14px}
+.card.success{border-left-color:var(--red)}
+.card.metered{border-left-color:#c97bff}
+.card.mirror_only{border-left-color:var(--amber)}
+.card.capped{border-left-color:var(--blue)}
+.card.clean{border-left-color:var(--green)}
+.card.error{border-left-color:var(--mut)}
+.chead{display:flex;align-items:center;justify-content:space-between}
+.sid{font-weight:700;font-size:15px}
+.badge{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:999px;
+  background:#2b2f3a;color:var(--txt)}
+.badge.success{background:var(--red);color:#1a1d24}
+.badge.metered{background:#c97bff;color:#1a1d24}
+.badge.mirror_only{background:var(--amber);color:#1a1d24}
+.badge.capped{background:var(--blue);color:#1a1d24}
+.badge.clean{background:var(--green);color:#1a1d24}
+.meaning{color:var(--mut);font-size:12px;margin:4px 0 10px}
+.map{color:var(--mut);font-size:12px}
+.proof{background:#14171d;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13px}
+.fix{font-size:13px;margin:8px 0 0}
+.timeline{margin:10px 0 0;font-size:12px}
+.timeline>summary{cursor:pointer;color:var(--blue);font-weight:600}
+.step{border-left:2px solid var(--line);padding:6px 0 6px 10px;margin:8px 0 0}
+.sn{color:var(--mut);font-weight:700;font-size:11px}
+.sv{font-size:10px;padding:1px 6px;border-radius:999px;background:#2b2f3a;margin-left:6px}
+.sv.success{background:var(--red);color:#1a1d24}
+.sv.mirror_only{background:var(--amber);color:#1a1d24}
+.turn{margin:4px 0 0}
+.turn b{display:inline-block;min-width:60px;color:var(--mut);font-size:11px;text-transform:uppercase}
+code{background:#0c0e12;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+  font:12px ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+p{margin:6px 0}
+</style></head><body><div class="wrap">
+<h1>Aphasia Agentry &mdash; attack simulation report</h1>
+<p class="sub">Run $run_id &middot; target $target &middot; started $started</p>
+<div class="scoreboard">
+<div class="tile score"><div class="n">$score</div><div class="l">Exposure score / 100</div></div>
+<div class="tile exploited"><div class="n">$exploited / $total</div><div class="l">Agents exploited</div></div>
+<div class="tile"><div class="n">$metered</div><div class="l">Cost breach</div></div>
+<div class="tile"><div class="n">$mirror_only</div><div class="l">Action captured</div></div>
+<div class="tile"><div class="n">$errors</div><div class="l">Errors</div></div>
+</div>
+$body
+<p class="sub">Verdicts are proof-based: a success means a planted canary was touched or returned &mdash; never a model's self-assessment. Full step-by-step evidence is in evidence.jsonl.</p>
+</div></body></html>

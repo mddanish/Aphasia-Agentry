@@ -1,0 +1,11 @@
+# INTENTIONALLY VULNERABLE -- localhost only, never expose.
+# Both services publish on 127.0.0.1 only. Do not change to 0.0.0.0 or a public interface.
+services:
+  agent:
+    build: ./agent
+    ports:
+      - "127.0.0.1:8000:8080"
+  mcp:
+    build: ./mcp
+    ports:
+      - "127.0.0.1:8001:8000"

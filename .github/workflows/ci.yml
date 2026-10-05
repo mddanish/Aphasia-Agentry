@@ -1,0 +1,17 @@
+name: ci
+# This workflow assumes the published layout where the oss/ subtree is the repo root
+# (so this file is at .github/workflows/ci.yml). Offline only: no docker, no live tests.
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      # Engine offline suite (StubProvider; no network).
+      - run: cd engine && uv run --python 3.12 pytest -m "not live"
+      # Fixture suite incl. sandbox-inert checks and the seed-mode end-to-end run
+      # (in-process Flask fixture, no docker/LLM). --with-editable keeps the engine
+      # source current so new modules are always picked up.
+      - run: uv run --python 3.12 --with-editable ./engine --with flask --with "mcp>=2" --with pytest python -m pytest fixture/tests
