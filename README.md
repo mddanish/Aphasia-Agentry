@@ -8,7 +8,7 @@ with per-run canaries, and get a report mapped to the **OWASP LLM Top 10** and M
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-8A2BE2)](docs/scenarios.md)
 [![Proof](https://img.shields.io/badge/verdicts-canary--proven-brightgreen)](#how-it-works)
-<!-- After publishing, add: [![CI](https://github.com/<owner>/aphasia-agentry/actions/workflows/ci.yml/badge.svg)](../../actions) -->
+[![CI](https://github.com/mddanish/Aphasia-Agentry/actions/workflows/ci.yml/badge.svg)](https://github.com/mddanish/Aphasia-Agentry/actions/workflows/ci.yml)
 
 ![Aphasia Agentry report](docs/assets/report-hero.png)
 
