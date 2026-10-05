@@ -5,15 +5,15 @@ Drive an attacker (curated seed payloads and/or any LLM) against a target, prove
 with per-run canaries, and get a report mapped to the **OWASP LLM Top 10** and MITRE ATLAS.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](engine/pyproject.toml)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-8A2BE2)](docs/scenarios.md)
 [![Proof](https://img.shields.io/badge/verdicts-canary--proven-brightgreen)](#how-it-works)
 [![CI](https://github.com/mddanish/Aphasia-Agentry/actions/workflows/ci.yml/badge.svg)](https://github.com/mddanish/Aphasia-Agentry/actions/workflows/ci.yml)
 
 ![Aphasia Agentry report](docs/assets/report-hero.png)
 
-> **INTENTIONALLY VULNERABLE.** The fixture in `fixture/` is for authorized, self-hosted
-> testing only. Run it on localhost; never expose it to a network.
+> **INTENTIONALLY VULNERABLE.** The fixture in [`fixture/`](fixture/) is for authorized,
+> self-hosted testing only. Run it on localhost; never expose it to a network.
 
 ## Install
 
@@ -53,15 +53,14 @@ Add an adaptive LLM attacker (the `--model` string selects the provider):
     aphasia run --model ollama/llama3.2:1b --api-base http://<host>:11434   # local Ollama
 
 `--mode hybrid` (default) runs the seeds first, then the LLM adapts. See `aphasia --help`,
-`docs/quickstart.md` and `docs/scenarios.md`.
+[docs/quickstart.md](docs/quickstart.md) and [docs/scenarios.md](docs/scenarios.md).
 
 ### Demo
 
-Record the seed-mode run as a GIF (`docs/demo.sh` has the sequence):
+![Aphasia Agentry seed-mode demo](docs/assets/demo.gif)
 
-    asciinema rec demo.cast -c "bash docs/demo.sh" && agg demo.cast docs/assets/demo.gif
-
-<!-- ![demo](docs/assets/demo.gif) -->
+Generated from [docs/demo.sh](docs/demo.sh) — record your own with
+`asciinema rec demo.cast -c "bash docs/demo.sh" && agg demo.cast docs/assets/demo.gif`.
 
 ## How it works
 
@@ -95,7 +94,7 @@ step-by-step timeline, and a concrete fix.
 
 ## Attacker modes
 
-- `seed` — curated `payloads.yaml` only, no LLM. Reproducible; proves all 11 vs the fixture.
+- `seed` — curated [payloads.yaml](engine/src/aphasia/data/payloads.yaml) only, no LLM. Reproducible; proves all 11 vs the fixture.
 - `adaptive` — an LLM plans every step (any litellm model).
 - `hybrid` (default) — seeds first, then the LLM adapts on what's unsolved.
 
@@ -107,21 +106,21 @@ step-by-step timeline, and a concrete fix.
 
 ## Project layout
 
-    engine/     the aphasia Python package (CLI, attacker, connectors, canary/mirror, report)
-      src/aphasia/data/scenarios.yaml   the 11 OWASP LLM Top 10 scenarios
-      src/aphasia/data/payloads.yaml    the curated seed-payload library
-    fixture/    the deliberately-vulnerable HTTP agent + MCP server (Docker, localhost only)
-    docs/       quickstart, scenarios, demo script, assets
+- [`engine/`](engine/) — the `aphasia` Python package (CLI, attacker, connectors, canary/mirror, report)
+  - [`scenarios.yaml`](engine/src/aphasia/data/scenarios.yaml) — the 11 OWASP LLM Top 10 scenarios
+  - [`payloads.yaml`](engine/src/aphasia/data/payloads.yaml) — the curated seed-payload library
+- [`fixture/`](fixture/) — the deliberately-vulnerable HTTP agent + MCP server (Docker, localhost only)
+- [`docs/`](docs/) — [quickstart](docs/quickstart.md), [scenarios](docs/scenarios.md), [demo script](docs/demo.sh), assets
 
 ## Contributing
 
-New seed payloads and scenarios are the easiest way to help — see `CONTRIBUTING.md`.
+New seed payloads and scenarios are the easiest way to help — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Security
 
 This project ships intentionally vulnerable code for testing. To report a vulnerability in
-Aphasia Agentry *itself*, see `SECURITY.md`.
+Aphasia Agentry *itself*, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-Apache-2.0 (see `LICENSE`). "Aphasia Agentry" names this project; the code is Apache-2.0.
+[Apache-2.0](LICENSE) (see also [NOTICE](NOTICE)). "Aphasia Agentry" names this project; the code is Apache-2.0.
