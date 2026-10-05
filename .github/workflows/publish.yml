@@ -1,16 +1,19 @@
-name: release-artifacts
-# On a published GitHub Release, build the wheel + sdist and attach them to the
-# release as downloadable assets (GitHub-hosted package files). PyPI publishing
-# is done separately (see README); to enable Trusted Publishing later, add a
-# pypa/gh-action-pypi-publish step with id-token: write.
+name: release
+# On a published GitHub Release: build the wheel + sdist, attach them to the release,
+# and publish to PyPI via Trusted Publishing (OIDC — no token stored in GitHub).
+# Register the trusted publisher on PyPI first (Project -> Publishing):
+#   Owner: mddanish   Repository: Aphasia-Agentry
+#   Workflow: publish.yml   Environment: pypi
 on:
   release:
     types: [published]
-permissions:
-  contents: write
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write     # attach assets to the release
+      id-token: write     # OIDC for PyPI Trusted Publishing
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -18,3 +21,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: engine/dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: engine/dist

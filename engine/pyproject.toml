@@ -1,10 +1,18 @@
 [project]
 name = "aphasia-agentry"
-version = "0.1.0"
+version = "0.1.1"
 description = "Aphasia Agentry - canary-proven breach and attack simulation for AI agents (OWASP LLM Top 10)"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
+keywords = ["ai-security", "llm-security", "owasp", "red-team", "breach-and-attack-simulation", "mcp", "prompt-injection", "agentic-ai", "litellm"]
 dependencies = ["httpx", "mcp>=2", "pyyaml", "litellm>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/mddanish/Aphasia-Agentry"
+Repository = "https://github.com/mddanish/Aphasia-Agentry"
+Issues = "https://github.com/mddanish/Aphasia-Agentry/issues"
+Changelog = "https://github.com/mddanish/Aphasia-Agentry/releases"
 
 [project.optional-dependencies]
 dev = ["pytest"]
