@@ -148,6 +148,10 @@ detection-gap workflow are in [docs/build/WAZUH.md](docs/build/WAZUH.md) and
 wire this into one flow are in progress (tracked in [docs/build/PLAN.md](docs/build/PLAN.md)); the
 proxy recorder, rules and TUI views are in place.
 
+To run the whole thing on a VM — clone this repo, `bash scripts/vm-setup.sh`, then follow
+[docs/build/WAZUH-INTEGRATION-TEST.md](docs/build/WAZUH-INTEGRATION-TEST.md). Everything ships in
+the clone; there is no separate kit.
+
 ## Attacker modes
 
 - `seed` — curated [payloads.yaml](engine/src/aphasia/data/payloads.yaml) only, no LLM. Reproducible; proves all 11 vs the fixture.
