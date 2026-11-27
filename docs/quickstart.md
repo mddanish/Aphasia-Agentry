@@ -35,4 +35,23 @@
 Useful flags: `--mode seed|adaptive|hybrid`, `--scenario <id>` (repeatable), `--model`, `--max-steps`, `--out`, `--target <http-url | mcp-url>`.
 To test the MCP scenario's server directly: `--target http://127.0.0.1:8001/mcp`.
 
+5. Scan by category instead of one scenario at a time:
+
+       aphasia run --category tool_mcp --mode seed    # tool misuse + MCP supply chain
+       aphasia catalog                                # the 59-technique taxonomy and coverage
+
+   Categories: `all`, `prompt_injection`, `evasion`, `extraction`, `exfiltration`, `tool_mcp`,
+   `rag_memory`, `multi_turn`, `excessive_agency`, `multimodal`, `availability`, `misinformation`.
+   `--category` is mutually exclusive with `--scenario`.
+
+6. Explore in the terminal UI:
+
+       aphasia tui --demo     # bundled demo data; the first real run opens the setup wizard
+       aphasia setup          # target, attacker LLM, proxy, Wazuh → ~/.config/aphasia (secrets 0600)
+       aphasia config         # show config (secrets redacted) and checks
+
+   The setup wizard keeps two LLMs separate: the **attacker** (Aphasia's own, plans attacks) and,
+   for proxy mode, the **upstream** (the real provider serving the agent under test). Keys live in
+   `APHASIA_ATTACKER_API_KEY` / `APHASIA_UPSTREAM_API_KEY`, never shared.
+
 Stop the fixture with `docker compose -f fixture/docker-compose.yml down`.
