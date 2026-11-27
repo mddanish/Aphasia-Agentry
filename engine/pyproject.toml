@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 keywords = ["ai-security", "llm-security", "owasp", "red-team", "breach-and-attack-simulation", "mcp", "prompt-injection", "agentic-ai", "litellm"]
-dependencies = ["httpx", "mcp>=2", "pyyaml", "litellm>=1.0"]
+dependencies = ["httpx", "mcp>=2", "pyyaml", "litellm>=1.0", "textual>=8.2,<9"]
 
 [project.urls]
 Homepage = "https://github.com/mddanish/Aphasia-Agentry"
@@ -15,7 +15,7 @@ Issues = "https://github.com/mddanish/Aphasia-Agentry/issues"
 Changelog = "https://github.com/mddanish/Aphasia-Agentry/releases"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "textual-dev>=1.8"]
 
 [project.scripts]
 aphasia = "aphasia.cli:main"
@@ -32,4 +32,4 @@ testpaths = ["tests"]
 markers = ["live: needs a running fixture and a real Ollama (OLLAMA_HOST)"]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = ["pytest", "textual-dev>=1.8"]

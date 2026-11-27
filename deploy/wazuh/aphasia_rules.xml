@@ -1,0 +1,157 @@
+<!--
+  Aphasia Agentry: Wazuh rules for AI agent / MCP telemetry (lab).
+  Install: /var/ossec/etc/rules/aphasia_rules.xml  (rule IDs 100200-100399)
+  Input:   JSON lines with field "source":
+             "aphasia-fixture"  fixture telemetry, direct mode   (SPEC §3)  rules 1002xx
+             "aphasia-proxy"    LLM gateway telemetry, proxy mode (SPEC §9) rules 1003xx
+  Verify:  /var/ossec/bin/wazuh-logtest  with lines from samples/telemetry.jsonl
+
+  Deliberate gaps in DIRECT mode (no rule on purpose, so these steps stay SILENT):
+    - read_record on a honey record (read-only)      -> gap "bulk canary record read"
+    - system prompt / credential leaked in a reply  -> gap "prompt leak"     (closed by 100340 in proxy mode)
+    - out-of-scope RAG retrieval                    -> gap "RAG ACL"
+  Agent outbound HTTP has no log source at all      -> "NO TELEMETRY"
+
+  Child-rule order matters: Wazuh tries children of a parent in file order and
+  the first match wins. Keep the higher-value rule first among siblings.
+-->
+<group name="aphasia,ai_agent,">
+
+  <!-- ===== direct mode: fixture telemetry (source = aphasia-fixture) ===== -->
+
+  <rule id="100200" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source">^aphasia-fixture$</field>
+    <description>Aphasia lab: AI agent telemetry event</description>
+  </rule>
+
+  <!-- telemetry-present markers (level 3 so they are indexed as alerts) -->
+  <rule id="100201" level="3">
+    <if_sid>100200</if_sid>
+    <field name="event">^inbound_message$</field>
+    <description>AI agent received a $(channel) message</description>
+    <group>aphasia_telemetry,</group>
+  </rule>
+
+  <rule id="100205" level="3">
+    <if_sid>100200</if_sid>
+    <field name="event">^tool_call$</field>
+    <description>AI agent tool call: $(tool)</description>
+    <group>aphasia_telemetry,</group>
+  </rule>
+
+  <rule id="100206" level="3">
+    <if_sid>100200</if_sid>
+    <field name="event">^agent_reply$</field>
+    <description>AI agent reply sent</description>
+    <group>aphasia_telemetry,</group>
+  </rule>
+
+  <rule id="100207" level="3">
+    <if_sid>100200</if_sid>
+    <field name="event">^mcp_tools_list$</field>
+    <description>MCP tools/list served</description>
+    <group>aphasia_telemetry,</group>
+  </rule>
+
+  <!-- correlation: a mutating tool call within 5 min of an MCP description change, same session -->
+  <rule id="100260" level="14" timeframe="300">
+    <if_sid>100205</if_sid>
+    <field name="mutating">^true$</field>
+    <if_matched_sid>100230</if_matched_sid>
+    <same_field>session</same_field>
+    <description>AI agent made a mutating tool call ($(tool)) after an MCP tool description changed</description>
+    <group>aphasia_detection,mcp,</group>
+  </rule>
+
+  <rule id="100210" level="12">
+    <if_sid>100205</if_sid>
+    <field name="tool">^issue_refund$</field>
+    <list field="args.payee" lookup="not_match_key">etc/lists/aphasia-known-payees</list>
+    <description>AI agent issued a refund to an unseen payee: $(args.payee)</description>
+    <group>aphasia_detection,fraud,</group>
+  </rule>
+
+  <rule id="100240" level="10">
+    <if_sid>100205</if_sid>
+    <field name="tool">^send_email$</field>
+    <list field="args.to" lookup="not_match_key">etc/lists/aphasia-known-recipients</list>
+    <description>AI agent sent email to an unknown recipient: $(args.to)</description>
+    <group>aphasia_detection,exfiltration,</group>
+  </rule>
+
+  <rule id="100220" level="13">
+    <if_sid>100205</if_sid>
+    <field name="mutating">^true$</field>
+    <field name="honey">^true$</field>
+    <description>Honey token passed in a mutating AI agent tool call ($(tool))</description>
+    <group>aphasia_detection,honeytoken,</group>
+  </rule>
+
+  <rule id="100250" level="8">
+    <if_sid>100205</if_sid>
+    <field name="over_budget">^true$</field>
+    <description>AI agent generation over cost budget</description>
+    <group>aphasia_detection,cost,</group>
+  </rule>
+
+  <rule id="100230" level="10">
+    <if_sid>100207</if_sid>
+    <field name="desc_changed">^true$</field>
+    <description>MCP tool description changed since first seen: $(tool)</description>
+    <group>aphasia_detection,mcp,</group>
+  </rule>
+
+  <!-- ===== proxy mode: LLM gateway telemetry (source = aphasia-proxy) ===== -->
+  <!-- Sees what the black box hides: context in, tool calls out, tool definitions. -->
+
+  <rule id="100300" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="source">^aphasia-proxy$</field>
+    <description>Aphasia proxy: LLM gateway event</description>
+  </rule>
+
+  <rule id="100301" level="3">
+    <if_sid>100300</if_sid>
+    <field name="event">^llm_exchange$</field>
+    <description>LLM exchange via Aphasia gateway (tools offered: $(tool_names))</description>
+    <group>aphasia_telemetry,llm_gateway,</group>
+  </rule>
+
+  <rule id="100302" level="3">
+    <if_sid>100300</if_sid>
+    <field name="event">^llm_tool_call$</field>
+    <description>LLM asked the agent to run tool: $(tool)</description>
+    <group>aphasia_telemetry,llm_gateway,</group>
+  </rule>
+
+  <!-- children of 100301: first match wins, keep highest level first -->
+  <rule id="100340" level="12">
+    <if_sid>100301</if_sid>
+    <field name="honey_in_reply">^true$</field>
+    <description>Honey credential returned in an LLM reply (prompt or secret leak)</description>
+    <group>aphasia_detection,llm_gateway,leak,</group>
+  </rule>
+
+  <rule id="100320" level="10">
+    <if_sid>100301</if_sid>
+    <field name="injection_in_tool_result">^true$</field>
+    <description>Prompt-injection markers in tool output sent to the LLM</description>
+    <group>aphasia_detection,llm_gateway,injection,</group>
+  </rule>
+
+  <rule id="100330" level="10">
+    <if_sid>100301</if_sid>
+    <field name="desc_changed">^true$</field>
+    <description>Tool definition changed between LLM calls: $(changed_tools)</description>
+    <group>aphasia_detection,llm_gateway,mcp,</group>
+  </rule>
+
+  <rule id="100310" level="13">
+    <if_sid>100302</if_sid>
+    <field name="honey">^true$</field>
+    <description>LLM asked for tool $(tool) with a honey token in its arguments</description>
+    <group>aphasia_detection,llm_gateway,honeytoken,</group>
+  </rule>
+
+</group>
