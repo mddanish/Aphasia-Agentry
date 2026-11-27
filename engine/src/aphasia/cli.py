@@ -1,5 +1,6 @@
 """aphasia CLI: list | payloads | run | report."""
 import argparse
+import json
 import os
 import sys
 import time
@@ -11,6 +12,7 @@ try:
 except PackageNotFoundError:  # running from source without an install
     __version__ = "0+unknown"
 
+from aphasia import catalog, config
 from aphasia.connectors import ConnectorError, HttpConnector, McpConnector
 from aphasia.payloads import DEFAULT_PATH as PAYLOADS, load_payloads
 from aphasia.providers import LiteLLMProvider, ProviderError
@@ -52,9 +54,84 @@ def _connector(target: str):
     return McpConnector(target)
 
 
+def _attacker(a) -> LiteLLMProvider:
+    """Build the ATTACKER LLM from flags > APHASIA_ATTACKER_* env > config > legacy defaults."""
+    cfg = config.load()
+    bad = [p for p in config.problems(cfg) if p.startswith(("attacker", "environment"))]
+    if bad:
+        raise ProviderError("; ".join(bad))
+    model = a.model or cfg.attacker.model or "ollama/llama3.2:1b"
+    base = (a.api_base or cfg.attacker.api_base
+            or os.environ.get("OLLAMA_API_BASE") or os.environ.get("OLLAMA_HOST") or None)
+    if cfg.proxy.enabled and config.same_endpoint(base or "", cfg.proxy.listen):
+        raise ProviderError("attacker LLM base URL points at the Aphasia proxy; use a different --api-base")
+    key = cfg.secret(config.ATTACKER_KEY) or None
+    if key is None and config.needs_key(model, base or ""):
+        if cfg.proxy.enabled:  # proxy mode: shared provider vars would mix attacker and agent traffic
+            raise ProviderError(f"{config.ATTACKER_KEY} is not set (required for {model} when the proxy "
+                                "is enabled; shared provider variables are not used)")
+        print(f"warning: {config.ATTACKER_KEY} not set; litellm will use its provider env vars for {model}",
+              file=sys.stderr)
+    return LiteLLMProvider(model=model, api_base=base, api_key=key)
+
+
+def _catalog(a) -> int:
+    cat = catalog.load()
+    cats = [cat.category(a.category)] if a.category and cat.category(a.category) else cat.categories
+    if a.category and not cat.category(a.category):
+        print(f"error: unknown category '{a.category}'", file=sys.stderr)
+        return 2
+    runnable = {s.id for s in load_yaml(SCENARIOS)}
+    for c in cats:
+        techs = [t for t in cat.in_category(c.id) if not a.proxy_better or t.proxy_better]
+        if not techs:
+            continue
+        print(f"\n[{c.id}] {c.name}  (proxy: {c.proxy_hint})")
+        rows = []
+        for t in techs:
+            run = "yes" if t.scenario in runnable else ("none" if t.testable == "none" else "todo")
+            rows.append([t.id, t.name[:38], t.owasp, "proxy+" if t.proxy_better else "",
+                         t.testable, t.scenario or "-", run])
+        print(_table(["ID", "Technique", "OWASP", "", "Test", "Scenario", "Runs"], rows))
+    total = len(cat.techniques)
+    runs = sum(1 for t in cat.techniques if t.scenario in runnable)
+    print(f"\n{total} techniques · {runs} runnable now · "
+          f"{sum(1 for t in cat.techniques if t.proxy_better)} clearer in proxy mode · "
+          f"{sum(1 for t in cat.techniques if t.testable == 'none')} reference-only")
+    print("Sources: AATMF v3 (CC BY-SA 4.0) · Arcanum PI Taxonomy (CC BY 4.0) · ZeroLeaks (FSL-1.1). "
+          "See docs/CREDITS.md.", file=sys.stderr)
+    return 0
+
+
+def _setup(a) -> int:
+    from aphasia.tui.app import run_tui
+    return run_tui(setup=True, setup_only=True)
+
+
+def _config_show(a) -> int:
+    cfg = config.load()
+    print(json.dumps(config.redacted(cfg), indent=2))
+    for p in config.problems(cfg):
+        print(f"error: {p}", file=sys.stderr)
+    for w in config.warnings(cfg):
+        print(f"warning: {w}", file=sys.stderr)
+    print(f"config dir: {config.home()}", file=sys.stderr)
+    return 2 if config.problems(cfg) else 0
+
+
 def _run(a) -> int:
     scs = load_yaml(SCENARIOS)
-    if a.scenario:
+    if getattr(a, "category", None) and a.scenario:
+        print("error: use --category or --scenario, not both", file=sys.stderr)
+        return 2
+    if getattr(a, "category", None):
+        picked, notes = catalog.select(a.category, [s.id for s in scs])
+        for n in notes:
+            print(f"note: {n}", file=sys.stderr)
+        if not picked:
+            return 2
+        scs = [s for s in scs if s.id in picked]
+    elif a.scenario:
         known = {s.id for s in scs}
         bad = [s for s in a.scenario if s not in known]
         if bad:
@@ -64,7 +141,7 @@ def _run(a) -> int:
     payloads = load_payloads(PAYLOADS) if a.mode in ("seed", "hybrid") else {}
     try:
         # seed mode needs no LLM; adaptive/hybrid build the litellm provider
-        provider = None if a.mode == "seed" else LiteLLMProvider(model=a.model, api_base=a.api_base)
+        provider = None if a.mode == "seed" else _attacker(a)
         connector = _connector(a.target)
         # run_id is generated inside run_all, so default out is a fresh timestamped dir
         out = Path(a.out) if a.out else Path("runs") / time.strftime("%Y%m%dT%H%M%S")
@@ -113,20 +190,41 @@ def main(argv: list[str] | None = None) -> int:
                         "chat URL, or an MCP endpoint [default: fixture]")
     r.add_argument("--scenario", action="append", metavar="ID",
                    help="run only this scenario id (repeatable) [default: all]")
+    r.add_argument("--category", metavar="CAT",
+                   help="run a taxonomy category instead: all, or one of "
+                        "prompt_injection, evasion, extraction, exfiltration, tool_mcp, rag_memory, "
+                        "multi_turn, excessive_agency, multimodal, availability, misinformation "
+                        "(see `aphasia catalog`). Mutually exclusive with --scenario")
     r.add_argument("--mode", default="hybrid", choices=["seed", "adaptive", "hybrid"],
                    help="seed = curated payloads only (no LLM); adaptive = LLM only; "
                         "hybrid = seeds first, then the LLM adapts [default: hybrid]")
-    r.add_argument("--model", default="ollama/llama3.2:1b", metavar="MODEL",
-                   help="litellm model string for the attacker, e.g. ollama/llama3.2:1b, "
-                        "gpt-4o-mini, anthropic/claude-3-5-haiku, groq/llama-3.1-8b-instant "
-                        "[default: ollama/llama3.2:1b]")
-    r.add_argument("--api-base", default=os.environ.get("OLLAMA_API_BASE") or os.environ.get("OLLAMA_HOST"),
-                   metavar="URL", help="base URL for a self-hosted backend (e.g. your Ollama/vLLM "
-                        "server); unused in seed mode. Keys come from litellm env vars")
+    r.add_argument("--model", default=None, metavar="MODEL",
+                   help="ATTACKER LLM (Aphasia's own, not the proxy upstream): litellm model string, "
+                        "e.g. ollama/llama3.2:1b, gpt-4o-mini, anthropic/claude-3-5-haiku "
+                        "[default: config [attacker].model, else ollama/llama3.2:1b]")
+    r.add_argument("--api-base", default=None, metavar="URL",
+                   help="attacker LLM base URL for a self-hosted backend (Ollama/vLLM); unused in seed "
+                        "mode [default: config [attacker].api_base, else OLLAMA_API_BASE/OLLAMA_HOST]. "
+                        "Key: APHASIA_ATTACKER_API_KEY (env or secrets.env), else litellm env vars")
     r.add_argument("--max-steps", type=int, default=6, metavar="N",
                    help="max attacker steps per scenario [default: 6]")
     r.add_argument("--out", metavar="DIR",
                    help="output dir for report + evidence [default: runs/<timestamp>]")
+
+    cat = sub.add_parser("catalog", help="list the merged technique taxonomy (AATMF + Arcanum + ZeroLeaks)",
+                         description="Print techniques by category, which scenario tests each, and which "
+                                     "are clearer in proxy mode. Reference metadata; run with --category.")
+    cat.add_argument("--category", metavar="CAT", help="show only this category")
+    cat.add_argument("--proxy-better", action="store_true", help="show only techniques clearer in proxy mode")
+    sub.add_parser("setup", help="first-run setup in the TUI (target, attacker LLM, proxy, Wazuh)",
+                   description="Open the TUI setup wizard and write ~/.config/aphasia/config.toml "
+                               "and secrets.env (0600).")
+    sub.add_parser("config", help="show the current configuration (secrets redacted) and checks",
+                   description="Print config with secrets as set/not set, then errors and warnings.")
+    tu = sub.add_parser("tui", help="open the terminal UI",
+                        description="Open the TUI. First run opens setup automatically.")
+    tu.add_argument("--run", metavar="DIR", help="run directory with run_view.json")
+    tu.add_argument("--demo", action="store_true", help="bundled demo data, skip setup")
 
     rp = sub.add_parser("report", help="re-render a report from a past run's evidence",
                         description="Rebuild report.html/report.json from <run-dir>/evidence.jsonl.")
@@ -149,6 +247,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Total: {sum(len(v) for v in lib.values())} seed payloads "
               f"across {len(scs)} scenarios")
         return 0
+    if a.cmd == "catalog":
+        return _catalog(a)
+    if a.cmd == "setup":
+        return _setup(a)
+    if a.cmd == "config":
+        return _config_show(a)
+    if a.cmd == "tui":
+        from aphasia.tui.app import run_tui
+        if a.run and not (Path(a.run) / "run_view.json").exists():
+            print(f"error: {a.run}/run_view.json not found; run `aphasia detect --run {a.run}` first",
+                  file=sys.stderr)
+            return 2
+        return run_tui(a.run, demo=a.demo)
     if a.cmd == "report":
         try:
             write_report(load_report(Path(a.run_dir)), Path(a.run_dir))

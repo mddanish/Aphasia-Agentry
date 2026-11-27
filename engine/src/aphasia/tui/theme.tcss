@@ -1,0 +1,88 @@
+/* Aphasia TUI theme: black terminal "explorer" look.
+   Colours are defined once in palette.py and mirrored here. */
+
+Screen {
+    background: #000000;
+    color: #d0d0d0;
+    layers: base;
+}
+
+/* ---------- top bar: brand + numbered sections + status ---------- */
+#topbar {
+    height: 1;
+    background: #111111;
+    padding: 0 1;
+}
+#brand { width: auto; text-style: bold; color: #e6e6e6; padding-right: 2; }
+#tabs { width: 1fr; }
+#status { width: auto; color: #8a8a8a; }
+
+/* ---------- breadcrumb ---------- */
+.crumb { height: 1; color: #8a8a8a; padding: 0 2; margin-top: 1; }
+.lead { height: auto; color: #8a8a8a; padding: 0 2; }
+.lead-title { height: 1; color: #e6e6e6; text-style: bold; padding: 0 2; margin-top: 1; }
+
+/* ---------- panels ---------- */
+.panel {
+    border: solid #3a3a3a;
+    border-title-color: #8a8a8a;
+    border-title-style: none;
+    background: #000000;
+    padding: 0 1;
+    height: 1fr;
+}
+.panel:focus-within, .panel:focus {
+    border: solid #6c9bd2;
+    border-title-color: #6c9bd2;
+}
+
+/* ---------- KPI row ---------- */
+#kpis { height: 4; padding: 0 2; margin-top: 1; }
+.kpi { width: 1fr; height: 4; }
+
+/* ---------- grids ---------- */
+.row { height: 1fr; padding: 0 1; }
+.col { width: 1fr; height: 1fr; }
+.gap { width: 2; }
+.vgap { height: 1; }
+
+/* ---------- lists and tables ---------- */
+ListView { background: #000000; height: 1fr; }
+ListView > ListItem { background: #000000; padding: 0 0; }
+ListView > ListItem.-highlight { background: #1e1e1e; }
+ListView:focus > ListItem.-highlight { background: #1e1e1e; }
+
+DataTable { background: #000000; height: 1fr; }
+DataTable > .datatable--header { background: #000000; color: #8a8a8a; text-style: none; }
+DataTable > .datatable--cursor { background: #1e1e1e; color: #ffffff; text-style: bold; }
+DataTable > .datatable--hover { background: #141414; }
+
+/* ---------- detail text ---------- */
+.detail { height: auto; }
+VerticalScroll { scrollbar-size-vertical: 1; scrollbar-color: #3a3a3a; scrollbar-background: #000000; }
+
+/* ---------- key hint bar ---------- */
+#keybar { dock: bottom; height: 1; background: #111111; padding: 0 1; color: #8a8a8a; }
+#footnote { dock: bottom; height: 1; padding: 0 2; color: #8a8a8a; }
+
+Screen { overflow: hidden; }
+#body { height: 1fr; }
+.narrow { width: 44; }
+
+/* ---------- setup wizard forms ---------- */
+.frow { height: auto; margin: 0 0 1 0; }
+.flabel { height: 1; }
+.fhint { height: 1; }
+Input { background: #000000; border: tall #3a3a3a; color: #e6e6e6; height: 3; }
+Input:focus { border: tall #6c9bd2; }
+Input > .input--placeholder { color: #5f5f5f; }
+Select { background: #000000; }
+Select > SelectCurrent { background: #000000; border: tall #3a3a3a; }
+Select:focus > SelectCurrent { border: tall #6c9bd2; }
+Switch { background: #000000; border: tall #3a3a3a; }
+Switch:focus { border: tall #6c9bd2; }
+Switch > .switch--slider { color: #3a3a3a; background: #111111; }
+Switch.-on > .switch--slider { color: #3fbf6f; }
+#forms { height: 1fr; }
+#checks { height: auto; }
+#help { margin-bottom: 1; }

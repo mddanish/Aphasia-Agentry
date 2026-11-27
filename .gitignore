@@ -8,3 +8,5 @@ dist/
 
 # Run outputs
 runs/
+fixture/logs/
+engine/runs/

@@ -1,0 +1,889 @@
+# Aphasia technique catalog — merged, deduplicated adversarial taxonomy for testing AI AGENTS.
+#
+# Scope: only tactics/techniques/procedures that Aphasia can RUN against a live agent or its
+# MCP toolchain (direct black box, or proxy mode). Pure training/supply-chain/infra/human-process
+# items from the sources are listed under tactic "context" with testable: none (reference only,
+# not run) so the taxonomy stays complete without pretending to test what Aphasia cannot.
+#
+# Sources (credit required by their licenses — see docs/CREDITS.md):
+#   aatmf    AATMF v3 (Kai Aizen / SnailSploit)        CC BY-SA 4.0   T<tac>-AT-<nnn>
+#   arcanum  Arcanum Prompt Injection Taxonomy (Haddix) CC BY 4.0     technique/evasion/intent id
+#   zeroleaks ZeroLeaks scanner categories (Arcanum-Sec? ZeroLeaks)   FSL-1.1-Apache-2.0  category
+# Each entry is one UNIQUE technique; `sources` lists every taxonomy that named the same thing.
+#
+# Fields:
+#   id            stable Aphasia id (AP-T##); never reused
+#   name          short label
+#   category      scan group (see `categories` below); pick with `aphasia run --category <id>`
+#   tactic        OWASP-LLM-aligned coarse bucket
+#   owasp/atlas   framework mapping (indicative; verify against current versions)
+#   scenario      existing Aphasia scenario that already exercises it, or "" if new/uncovered
+#   channel       delivery: direct | email | doc | ticket | mcp | rag | multimodal | any
+#   testable      direct | proxy | both | none   (none = reference only, not executable here)
+#   proxy_better  true when proxy mode sees far more (context in, tool defs, tool calls) than black box
+#   sources       {aatmf, arcanum, zeroleaks} ids that map to this technique
+
+categories:
+- id: prompt_injection
+  name: Prompt & context subversion
+  proxy_hint: partial
+- id: evasion
+  name: Semantic & encoding evasion
+  proxy_hint: partial
+- id: extraction
+  name: System prompt & secret extraction
+  proxy_hint: strong
+- id: exfiltration
+  name: Data exfiltration
+  proxy_hint: strong
+- id: tool_mcp
+  name: Tool misuse & MCP supply chain
+  proxy_hint: strong
+- id: rag_memory
+  name: RAG & memory manipulation
+  proxy_hint: strong
+- id: multi_turn
+  name: Multi-turn & reasoning exploitation
+  proxy_hint: strong
+- id: excessive_agency
+  name: Excessive agency & agent control
+  proxy_hint: strong
+- id: multimodal
+  name: Multimodal & cross-channel
+  proxy_hint: partial
+- id: availability
+  name: Denial of service / wallet
+  proxy_hint: partial
+- id: misinformation
+  name: Deception & misinformation
+  proxy_hint: direct
+- id: context
+  name: Out of agent scope (reference only)
+  proxy_hint: none
+techniques:
+- id: AP-T01
+  name: Direct instruction override
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051.000
+  scenario: direct_injection
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: direct_request
+    zeroleaks: instruction_override
+- id: AP-T02
+  name: Indirect injection (email/doc/ticket)
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051.001
+  scenario: indirect_injection
+  channel: email
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T1-AT-001
+    arcanum: indirect_input
+    zeroleaks: indirect_injection
+- id: AP-T03
+  name: Authority / role impersonation
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T1-AT-014
+    arcanum: authority_impersonation
+    zeroleaks: authority_exploit
+- id: AP-T04
+  name: Special / control token injection
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: special_token_injection
+    zeroleaks: ''
+- id: AP-T05
+  name: Output priming / prefix injection
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T1-AT-004
+    arcanum: output_priming
+    zeroleaks: ''
+- id: AP-T06
+  name: Context overflow / window flooding
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T4-AT-007
+    arcanum: context_overflow
+    zeroleaks: context_overflow
+- id: AP-T07
+  name: Policy-file framing (policy puppetry)
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: policy_file_framing
+    zeroleaks: policy_puppetry
+- id: AP-T08
+  name: History fabrication (fake prior turn)
+  category: prompt_injection
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: T4-AT-006
+    arcanum: history_fabrication
+    zeroleaks: ''
+- id: AP-T09
+  name: Base/hex/binary encoding
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T2-AT-003
+    arcanum: base64
+    zeroleaks: encoding
+- id: AP-T10
+  name: Unicode / homoglyph / invisible text
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T2-AT-004
+    arcanum: invisible_text
+    zeroleaks: ''
+- id: AP-T11
+  name: Bidirectional text override (Trojan)
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: doc
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: bidi_override
+    zeroleaks: ''
+- id: AP-T12
+  name: Multi-language / translation evasion
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T2-AT-002
+    arcanum: alt_language
+    zeroleaks: ''
+- id: AP-T13
+  name: Layered / chained encoding
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T2-AT-017
+    arcanum: layered_encoding
+    zeroleaks: ''
+- id: AP-T14
+  name: ASCII art / symbol-font smuggling
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: ascii
+    zeroleaks: ascii_art
+- id: AP-T15
+  name: Query / code-structure encoding
+  category: evasion
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: query_language_encoding
+    zeroleaks: ''
+- id: AP-T16
+  name: System prompt leak
+  category: extraction
+  tactic: LLM07
+  owasp: LLM07
+  atlas: AML.T0056
+  scenario: system_prompt_leak
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: system_prompt_leak
+    zeroleaks: system_prompt_extraction
+- id: AP-T17
+  name: Prompt-secret / credential extraction
+  category: extraction
+  tactic: LLM07
+  owasp: LLM07
+  atlas: AML.T0056
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: get_prompt_secret
+    zeroleaks: extraction
+- id: AP-T18
+  name: Tool / capability enumeration
+  category: extraction
+  tactic: LLM07
+  owasp: LLM07
+  atlas: AML.T0057
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: tool_enumeration
+    zeroleaks: ''
+- id: AP-T19
+  name: Chunked / oracle secret probing
+  category: extraction
+  tactic: LLM07
+  owasp: LLM07
+  atlas: AML.T0056
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: secret_probing
+    zeroleaks: implicit_extraction
+- id: AP-T20
+  name: CoT introspection extraction
+  category: extraction
+  tactic: LLM07
+  owasp: LLM07
+  atlas: AML.T0056
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: cot_introspection
+    zeroleaks: ''
+- id: AP-T21
+  name: Honey-token exfil to beacon
+  category: exfiltration
+  tactic: LLM02
+  owasp: LLM02
+  atlas: AML.T0024
+  scenario: data_exfil
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-011
+    arcanum: sensitive_data_exfiltration
+    zeroleaks: exfiltration
+- id: AP-T22
+  name: Exfil via rendered link/image markdown
+  category: exfiltration
+  tactic: LLM02
+  owasp: LLM02
+  atlas: AML.T0024
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T7-AT-014
+    arcanum: link_injection
+    zeroleaks: markdown_injection
+- id: AP-T23
+  name: Cross-tenant / cross-session leakage
+  category: exfiltration
+  tactic: LLM02
+  owasp: LLM02
+  atlas: AML.T0024
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: cross_tenant_leakage
+    zeroleaks: ''
+- id: AP-T24
+  name: Output-handling exploitation
+  category: exfiltration
+  tactic: LLM05
+  owasp: LLM05
+  atlas: ''
+  scenario: output_handling
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T7-AT-003
+    arcanum: output_handling_exploitation
+    zeroleaks: format_exploit
+- id: AP-T25
+  name: Out-of-policy tool call (excess agency)
+  category: tool_mcp
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: tool_misuse
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-002
+    arcanum: unauthorized_action_execution
+    zeroleaks: tool_exploit
+- id: AP-T26
+  name: MCP tool-definition poisoning
+  category: tool_mcp
+  tactic: LLM03
+  owasp: LLM03
+  atlas: AML.T0010
+  scenario: mcp_tool_poisoning
+  channel: mcp
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-013
+    arcanum: tool_definition_injection
+    zeroleaks: tool_poisoning
+- id: AP-T27
+  name: Tool rug pull (TOCTOU mutation)
+  category: tool_mcp
+  tactic: LLM03
+  owasp: LLM03
+  atlas: AML.T0010
+  scenario: ''
+  channel: mcp
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: tool_rug_pull
+    zeroleaks: ''
+- id: AP-T28
+  name: Tool-name shadowing / squatting
+  category: tool_mcp
+  tactic: LLM03
+  owasp: LLM03
+  atlas: AML.T0010
+  scenario: ''
+  channel: mcp
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: tool_preference_manipulation
+    zeroleaks: mcp_shadowing
+- id: AP-T29
+  name: Tool-call spoofing (forged result)
+  category: tool_mcp
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: tool_call_spoofing
+    zeroleaks: ''
+- id: AP-T30
+  name: Function-call parameter smuggling
+  category: tool_mcp
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: function_call_parameter_smuggling
+    zeroleaks: ''
+- id: AP-T31
+  name: Tool-chain SSRF / local resource
+  category: tool_mcp
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-016
+    arcanum: ''
+    zeroleaks: protocol_exploit
+- id: AP-T32
+  name: RAG retrieval / ranking poisoning
+  category: rag_memory
+  tactic: LLM08
+  owasp: LLM08
+  atlas: AML.T0070
+  scenario: rag_exfil
+  channel: rag
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T12-AT-002
+    arcanum: retrieval_ranking_manipulation
+    zeroleaks: rag_poisoning
+- id: AP-T33
+  name: Memory / context poisoning
+  category: rag_memory
+  tactic: LLM08
+  owasp: LLM08
+  atlas: AML.T0070
+  scenario: memory_poisoning
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T4-AT-011
+    arcanum: echo_chamber
+    zeroleaks: memory_poisoning
+- id: AP-T34
+  name: Dormant / trigger-gated payload
+  category: rag_memory
+  tactic: LLM08
+  owasp: LLM08
+  atlas: AML.T0070
+  scenario: ''
+  channel: rag
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: conditional_trigger_payload
+    zeroleaks: context_injection
+- id: AP-T35
+  name: Source authority spoofing / fake cite
+  category: rag_memory
+  tactic: LLM08
+  owasp: LLM08
+  atlas: AML.T0070
+  scenario: ''
+  channel: rag
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T12-AT-008
+    arcanum: fake_citation_grounding
+    zeroleaks: ''
+- id: AP-T36
+  name: Crescendo (gradual escalation)
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T4-AT-005
+    arcanum: crescendo
+    zeroleaks: crescendo
+- id: AP-T37
+  name: Many-shot jailbreaking
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: many_shot
+    zeroleaks: many_shot
+- id: AP-T38
+  name: Multi-turn decomposition
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: multi_turn_decomposition
+    zeroleaks: multi_turn
+- id: AP-T39
+  name: Topic transition (gradual pivot)
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T3-AT-014
+    arcanum: ''
+    zeroleaks: topic_transition
+- id: AP-T40
+  name: CoT hijack / reasoning dilution
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: reasoning_dilution
+    zeroleaks: cot_hijack
+- id: AP-T41
+  name: CoT spoofing (fake reasoning trace)
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: cot_spoofing
+    zeroleaks: ''
+- id: AP-T42
+  name: Fictional / academic framing
+  category: multi_turn
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0054
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T3-AT-001
+    arcanum: narrative_injection
+    zeroleaks: persona
+- id: AP-T43
+  name: Goal hijacking
+  category: excessive_agency
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-003
+    arcanum: ''
+    zeroleaks: role_hijack
+- id: AP-T44
+  name: Confused deputy (authority confusion)
+  category: excessive_agency
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: confused_deputy
+    zeroleaks: ''
+- id: AP-T45
+  name: Second-order / inter-agent injection
+  category: excessive_agency
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: proxy
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-005
+    arcanum: russian_doll
+    zeroleaks: second_order
+- id: AP-T46
+  name: Zero-click agent injection (EchoLeak)
+  category: excessive_agency
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: email
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: ''
+    zeroleaks: zero_click_injection
+- id: AP-T47
+  name: Agentic compliance momentum
+  category: excessive_agency
+  tactic: LLM06
+  owasp: LLM06
+  atlas: AML.T0053
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: ''
+    arcanum: agentic_compliance_momentum
+    zeroleaks: ''
+- id: AP-T48
+  name: Image-based prompt injection
+  category: multimodal
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: multimodal
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T9-AT-001
+    arcanum: image_input
+    zeroleaks: ''
+- id: AP-T49
+  name: Audio instruction embedding
+  category: multimodal
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: multimodal
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T9-AT-002
+    arcanum: audio_input
+    zeroleaks: ''
+- id: AP-T50
+  name: Document-structure exploitation
+  category: multimodal
+  tactic: LLM01
+  owasp: LLM01
+  atlas: AML.T0051
+  scenario: ''
+  channel: doc
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T9-AT-012
+    arcanum: file_upload
+    zeroleaks: ''
+- id: AP-T51
+  name: Denial of wallet (cost inflation)
+  category: availability
+  tactic: LLM10
+  owasp: LLM10
+  atlas: AML.T0034
+  scenario: denial_of_wallet
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T14-AT-003
+    arcanum: denial_of_wallet
+    zeroleaks: ''
+- id: AP-T52
+  name: Recursive / reflection-loop exhaustion
+  category: availability
+  tactic: LLM10
+  owasp: LLM10
+  atlas: AML.T0034
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: true
+  sources:
+    aatmf: T11-AT-012
+    arcanum: ''
+    zeroleaks: ''
+- id: AP-T53
+  name: Misinformation / fact fabrication
+  category: misinformation
+  tactic: LLM09
+  owasp: LLM09
+  atlas: AML.T0048
+  scenario: misinformation
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: T8-AT-007
+    arcanum: generate_disinformation
+    zeroleaks: ''
+- id: AP-T54
+  name: Unauthorized professional advice
+  category: misinformation
+  tactic: LLM09
+  owasp: LLM09
+  atlas: AML.T0048
+  scenario: ''
+  channel: direct
+  testable: both
+  proxy_better: false
+  sources:
+    aatmf: ''
+    arcanum: authorized_advice_exploitation
+    zeroleaks: ''
+- id: AP-T55
+  name: Training data / dataset poisoning
+  category: context
+  tactic: LLM04
+  owasp: LLM04
+  atlas: AML.T0020
+  scenario: ''
+  channel: any
+  testable: none
+  proxy_better: false
+  sources:
+    aatmf: T6-AT-002
+    arcanum: data_poisoning
+    zeroleaks: ''
+- id: AP-T56
+  name: Model repo / checkpoint poisoning
+  category: context
+  tactic: LLM03
+  owasp: LLM03
+  atlas: AML.T0018
+  scenario: ''
+  channel: any
+  testable: none
+  proxy_better: false
+  sources:
+    aatmf: T13-AT-001
+    arcanum: supply_chain_input
+    zeroleaks: ''
+- id: AP-T57
+  name: Membership / model inversion
+  category: context
+  tactic: LLM02
+  owasp: LLM02
+  atlas: AML.T0044
+  scenario: ''
+  channel: any
+  testable: none
+  proxy_better: false
+  sources:
+    aatmf: T10-AT-003
+    arcanum: model_privacy_extraction
+    zeroleaks: ''
+- id: AP-T58
+  name: Human reviewer / workflow exploitation
+  category: context
+  tactic: LLM09
+  owasp: LLM09
+  atlas: ''
+  scenario: ''
+  channel: any
+  testable: none
+  proxy_better: false
+  sources:
+    aatmf: T15-AT-001
+    arcanum: ''
+    zeroleaks: ''
+- id: AP-T59
+  name: Infrastructure / GPU-farm hijack
+  category: context
+  tactic: LLM10
+  owasp: LLM10
+  atlas: ''
+  scenario: ''
+  channel: any
+  testable: none
+  proxy_better: false
+  sources:
+    aatmf: T14-AT-001
+    arcanum: ''
+    zeroleaks: ''

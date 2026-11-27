@@ -101,3 +101,17 @@ def test_help_and_version(capsys):
         main(["--help"])
     top = capsys.readouterr().out
     assert all(c in top for c in ["list", "payloads", "run", "report", "Examples:"])
+
+
+def test_category_and_scenario_are_mutually_exclusive(tmp_path):
+    from aphasia.cli import main
+    rc = main(["run", "--category", "tool_mcp", "--scenario", "direct_injection",
+               "--mode", "seed", "--out", str(tmp_path)])
+    assert rc == 2
+
+
+def test_catalog_command_runs(capsys):
+    from aphasia.cli import main
+    assert main(["catalog", "--category", "tool_mcp"]) == 0
+    out = capsys.readouterr().out
+    assert "MCP tool-definition poisoning" in out and "tool_mcp" in out

@@ -1,0 +1,11 @@
+# Drop into wazuh-docker/single-node/ next to docker-compose.yml.
+# Mounts Aphasia rules, lists and the fixture log folder into the manager.
+# Set APHASIA_REPO to the absolute path of your Aphasia-Agentry checkout.
+services:
+  wazuh.manager:
+    volumes:
+      - ${APHASIA_REPO}/deploy/wazuh/aphasia_rules.xml:/var/ossec/etc/rules/aphasia_rules.xml:ro
+      - ${APHASIA_REPO}/deploy/wazuh/lists/aphasia-known-payees:/var/ossec/etc/lists/aphasia-known-payees
+      - ${APHASIA_REPO}/deploy/wazuh/lists/aphasia-known-recipients:/var/ossec/etc/lists/aphasia-known-recipients
+      - ${APHASIA_REPO}/fixture/logs:/var/log/aphasia:ro
+      - ${APHASIA_REPO}/engine/runs/proxy:/var/log/aphasia-proxy:ro

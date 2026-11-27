@@ -1,0 +1,13 @@
+# Copy to fixture/docker-compose.override.yml. Fixture writes telemetry to ./logs/fixture.jsonl.
+# Ports stay on 127.0.0.1 (intentionally vulnerable fixture).
+services:
+  agent:
+    environment:
+      APHASIA_LOG: /logs/fixture.jsonl
+    volumes:
+      - ./logs:/logs
+  mcp:
+    environment:
+      APHASIA_LOG: /logs/fixture.jsonl
+    volumes:
+      - ./logs:/logs

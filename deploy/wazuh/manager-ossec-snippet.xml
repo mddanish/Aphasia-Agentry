@@ -1,0 +1,17 @@
+<!-- Add inside <ossec_config> of the MANAGER (single-node docker:
+     config/wazuh_cluster/wazuh_manager.conf). Logs are read by the manager itself,
+     so no Wazuh agent is needed in the lab. -->
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/aphasia/fixture.jsonl</location>
+</localfile>
+
+<!-- proxy mode: LLM gateway log written by `aphasia proxy` -->
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/aphasia-proxy/proxy.jsonl</location>
+</localfile>
+
+<!-- Add inside the existing <ruleset> block -->
+<list>etc/lists/aphasia-known-payees</list>
+<list>etc/lists/aphasia-known-recipients</list>
