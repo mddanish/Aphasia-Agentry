@@ -43,6 +43,10 @@ Point it at your own agent instead of the fixture:
 
 `aphasia list` shows the scenarios; `aphasia payloads` the seed library; `aphasia --help` the rest.
 
+More commands: `aphasia catalog` (a merged 59-technique taxonomy), `aphasia run --category <id>`
+(scan a whole category), `aphasia tui` (terminal UI, first run opens a setup wizard),
+`aphasia setup` / `aphasia config` (configure the attacker LLM, optional proxy mode and Wazuh).
+
 ## Links
 
 Full documentation, the vulnerable fixture, contributing guide and source:
