@@ -15,6 +15,11 @@ receives from its LLM.
 
 ![Aphasia Agentry report](docs/assets/report-hero.png)
 
+The terminal UI (`aphasia tui`) explores runs, detection gaps and the technique catalog:
+
+![Aphasia Agentry TUI — Work](docs/assets/tui-work.png)
+![Aphasia Agentry TUI — Catalog](docs/assets/tui-catalog.png)
+
 > **INTENTIONALLY VULNERABLE.** The fixture in [`fixture/`](fixture/) is for authorized,
 > self-hosted testing only. Run it on localhost; never expose it to a network.
 
@@ -104,11 +109,11 @@ Generated from [docs/demo.sh](docs/demo.sh) — record your own with
             cost markers ([[COST:n]]) ───────────────────► budget breached? ──► metered (LLM10)
 
 Every step is appended to an append-only `evidence.jsonl` (12 keys incl. `scenario_id`).
-The report (`report.html` / `report.json`) shows, per scenario: the attack, its ATLAS/OWASP
-mapping, the canary-backed proof (winning payload, target reply, captured tool call), a
-step-by-step timeline, and a concrete fix.
-
-![Report scroll-through](docs/assets/report-scroll.gif)
+Every run writes `report.html`, `report.json` and a shareable `report.md`: an executive summary,
+exposure score with a severity band, an OWASP LLM Top 10 coverage matrix, and per-scenario findings
+— the attack, its ATLAS/OWASP mapping and technique-catalog cross-references, the canary-backed proof
+(winning payload, target reply, captured tool call), a step-by-step timeline, and a concrete fix.
+The report image at the top of this README is a real rendered run.
 
 ## Coverage (OWASP LLM Top 10)
 
