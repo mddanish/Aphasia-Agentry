@@ -75,6 +75,25 @@ def _attacker(a) -> LiteLLMProvider:
     return LiteLLMProvider(model=model, api_base=base, api_key=key)
 
 
+def _detect(a) -> int:
+    from aphasia.detect import detect
+    try:
+        view = detect(Path(a.run), Path(a.from_file) if a.from_file else None, insecure=a.insecure,
+                      window_before=a.window_before, window_after=a.window_after, min_level=a.min_level)
+    except (OSError, ValueError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:  # httpx and friends raise many types; surface cleanly
+        print(f"error: Wazuh query failed: {e}", file=sys.stderr)
+        return 2
+    det = sum(1 for s in view["steps"] if s["result"] == "detected")
+    sil = sum(1 for s in view["steps"] if s["result"] == "silent")
+    mis = sum(1 for s in view["steps"] if s["result"] == "missing")
+    print(f"detect {view['run_id']}: {det} detected · {sil} silent · {mis} no-telemetry · "
+          f"{len(view['gaps'])} gap(s) — wrote {a.run}/run_view.json, detections.json")
+    return 0
+
+
 def _catalog(a) -> int:
     cat = catalog.load()
     cats = [cat.category(a.category)] if a.category and cat.category(a.category) else cat.categories
@@ -226,6 +245,16 @@ def main(argv: list[str] | None = None) -> int:
     tu.add_argument("--run", metavar="DIR", help="run directory with run_view.json")
     tu.add_argument("--demo", action="store_true", help="bundled demo data, skip setup")
 
+    dt = sub.add_parser("detect", help="correlate a run's evidence with Wazuh alerts (detection gaps)",
+                        description="For each attack step, check whether Wazuh detected it; write "
+                                    "detections.json and run_view.json for the TUI.")
+    dt.add_argument("--run", required=True, metavar="DIR", help="a run directory with evidence.jsonl")
+    dt.add_argument("--from-file", metavar="PATH", help="offline: a saved Wazuh _search response JSON")
+    dt.add_argument("--insecure", action="store_true", help="skip TLS verification (lab only)")
+    dt.add_argument("--window-before", type=int, default=5, metavar="MIN", help="minutes before a step [5]")
+    dt.add_argument("--window-after", type=int, default=90, metavar="SEC", help="seconds after a step [90]")
+    dt.add_argument("--min-level", type=int, default=7, metavar="N", help="min Wazuh level counted as detected [7]")
+
     rp = sub.add_parser("report", help="re-render a report from a past run's evidence",
                         description="Rebuild report.html/report.json from <run-dir>/evidence.jsonl.")
     rp.add_argument("--run-dir", required=True, metavar="DIR", help="a previous run's output dir")
@@ -249,6 +278,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if a.cmd == "catalog":
         return _catalog(a)
+    if a.cmd == "detect":
+        return _detect(a)
     if a.cmd == "setup":
         return _setup(a)
     if a.cmd == "config":

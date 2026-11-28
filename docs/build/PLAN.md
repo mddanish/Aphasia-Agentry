@@ -10,7 +10,7 @@ stable by Tue 1 Dec, show proxy mode from a recorded run (`aphasia tui --run <re
 |---|---|---|
 | Sat 28 Nov | 0 Bootstrap, 1 Telemetry | fixture writes `fixture/logs/fixture.jsonl` during `aphasia run` |
 | Sat 28 Nov | 2 Wazuh up | rules load, `wazuh-logtest` matches `deploy/wazuh/samples/expected.md` (lines 1–10) |
-| Sun 29 Nov | 3 Detect | `aphasia detect` works offline (sample file) and live |
+| ~~Phase 3 Detect~~ | **done** | `aphasia detect` offline (sample) + live; writes run_view.json |
 | Sun 29 Nov | 4 Proxy command | `aphasia proxy start/status/stop` runs the recorder via uvx; agent settings printed |
 | Mon 30 Nov | 5 Lab LLM agent | `fixture/llm-agent` through the proxy; ≥4 scenarios proven at temperature 0 |
 | Mon 30 Nov | 5b Catalog scenarios | top uncovered techniques get scenarios (see Phase 5b) |

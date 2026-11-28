@@ -16,6 +16,12 @@ class HttpConnector:
         self.plant_url = plant_url
         self._identity = identity
         self._timeout = timeout
+        self._ctx: dict[str, str] = {}
+
+    def set_context(self, run_id: str, scenario: str, step_no: int) -> None:
+        """Run context for telemetry correlation; sent as X-Aphasia-* headers on the next deliver."""
+        self._ctx = {"X-Aphasia-Run": str(run_id), "X-Aphasia-Scenario": str(scenario),
+                     "X-Aphasia-Step": str(step_no), "X-Aphasia-Session": f"{run_id}:{scenario}"}
 
     @property
     def host(self) -> str:
@@ -25,9 +31,9 @@ class HttpConnector:
     def identity(self) -> str:
         return self._identity
 
-    def _post(self, url: str, body: dict) -> str:
+    def _post(self, url: str, body: dict, headers: dict | None = None) -> str:
         try:
-            r = httpx.post(url, json=body, timeout=self._timeout)
+            r = httpx.post(url, json=body, headers=headers, timeout=self._timeout)
         except httpx.HTTPError as e:
             raise ConnectorError(f"cannot reach {url}: {e}") from e
         if r.status_code != 200:
@@ -35,7 +41,8 @@ class HttpConnector:
         return r.text[:MAX_BODY]
 
     def deliver(self, step: Step) -> Observation:
-        text = self._post(self.base_url, {"message": step.payload, "channel": step.channel})
+        text = self._post(self.base_url, {"message": step.payload, "channel": step.channel},
+                          headers=self._ctx or None)
         try:
             data = json.loads(text)
             calls = [

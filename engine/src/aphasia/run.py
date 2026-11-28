@@ -78,6 +78,8 @@ def run_scenario(scenario, connector, attacker, canaries, mirror, store, run_id,
             if step is None:  # seed payloads exhausted, no adaptive fallback
                 break
             step.channel = scenario.channel  # scenario owns the delivery channel
+            if hasattr(connector, "set_context"):  # tag telemetry for Wazuh correlation
+                connector.set_context(run_id, scenario.id, step_no)
             obs = connector.deliver(step)
         except (ConnectorError, ProviderError) as e:
             return fail(step_no, step, e, step_no + 1)

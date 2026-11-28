@@ -208,6 +208,8 @@ class AphasiaApp(App):
                 classes="row")
 
     def _scen_detail(self, i: int) -> Text:
+        if not self.view.scenarios or i >= len(self.view.scenarios):
+            return P.styled("nothing to show yet", P.MUTED)
         s = self.view.scenarios[i]
         t = P.square(P.SEV[s["severity"]])
         t.append(f"#{i + 1} of {len(self.view.scenarios)} · {s['severity'].upper()} · {s['verdict']}\n", style=P.MUTED)
@@ -236,6 +238,8 @@ class AphasiaApp(App):
                 classes="row")
 
     def _step_detail(self, i: int) -> Text:
+        if not self.view.steps or i >= len(self.view.steps):
+            return P.styled("nothing to show yet", P.MUTED)
         s = self.view.steps[i]
         t = P.square(P.RESULT[s["result"]])
         t.append(f"{s['scenario']} · step {s['no']} · {s['ts']}\n", style=P.MUTED)
@@ -341,6 +345,8 @@ class AphasiaApp(App):
                 classes="row")
 
     def _gap_detail(self, i: int) -> Text:
+        if not self.view.gaps or i >= len(self.view.gaps):
+            return P.styled("nothing to show yet", P.MUTED)
         g = self.view.gaps[i]
         t = P.square(P.SEV[g["severity"]])
         t.append(f"#{g['rank']} of {len(self.view.gaps)} · {g['severity'].upper()} · {g['kind']}\n", style=P.MUTED)
@@ -377,6 +383,8 @@ class AphasiaApp(App):
                 classes="row")
 
     def _trace_detail(self, i: int) -> Text:
+        if not self.view.exchanges or i >= len(self.view.exchanges):
+            return P.styled("nothing to show yet", P.MUTED)
         e = self.view.exchanges[i]
         t = P.styled(f"#{e['no']} · {e['scenario']} step {e['step']} · {e['model']} · {e['latency_ms']} ms · "
                      f"session {e['session']}\n", P.MUTED)

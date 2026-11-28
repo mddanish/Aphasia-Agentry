@@ -15,7 +15,7 @@ Issues = "https://github.com/mddanish/Aphasia-Agentry/issues"
 Changelog = "https://github.com/mddanish/Aphasia-Agentry/releases"
 
 [project.optional-dependencies]
-dev = ["pytest", "textual-dev>=1.8"]
+dev = ["pytest", "textual-dev>=1.8", "flask>=3"]
 
 [project.scripts]
 aphasia = "aphasia.cli:main"
@@ -32,4 +32,4 @@ testpaths = ["tests"]
 markers = ["live: needs a running fixture and a real Ollama (OLLAMA_HOST)"]
 
 [dependency-groups]
-dev = ["pytest", "textual-dev>=1.8"]
+dev = ["pytest", "textual-dev>=1.8", "flask>=3"]

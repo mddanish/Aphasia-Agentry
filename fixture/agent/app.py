@@ -30,12 +30,43 @@ notes the OWASP LLM Top 10 category it exercises:
                                                       -> issue_refund(order=order canary), mutating (LLM01 direct / LLM06 agency)
   anything else                                       -> lookup_order (read-only), no canary
 """
+import json
+import os
 import re
+import time
 
 from flask import Flask, jsonify, request
 
 BANNER = "INTENTIONALLY VULNERABLE - do not expose to the internet"
 app = Flask(__name__)
+
+# Telemetry: append one JSON line per event to $APHASIA_LOG (unset = no logging, so tests are
+# unchanged). The fixture writes only to this configured path, never an attacker-chosen one.
+_LOG = os.environ.get("APHASIA_LOG")
+
+
+def _emit(event: str, **fields) -> None:
+    if not _LOG:
+        return
+    h = request.headers
+    rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "source": "aphasia-fixture", "component": "agent", "event": event,
+           "session": h.get("X-Aphasia-Session")
+           or f"{h.get('X-Aphasia-Run', '')}:{h.get('X-Aphasia-Scenario', '')}".strip(":") or "default"}
+    for k, v in (("run_id", "X-Aphasia-Run"), ("scenario", "X-Aphasia-Scenario"), ("step", "X-Aphasia-Step")):
+        if h.get(v):
+            rec[k] = h.get(v)
+    rec.update(fields)
+    try:
+        with open(_LOG, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+    except OSError:
+        pass  # logging must never break the fixture
+
+
+def _honey(text: str) -> bool:
+    """Any seeded canary token appears in the text (models a honeytoken registry)."""
+    return any(t and t in text for t in STATE.values())
 
 # fabricated in-memory state; slots are matched by substring, falling back to any token
 STATE: dict[str, str] = {}
@@ -62,7 +93,14 @@ def call(name: str, mutating: bool, **args):
 
 
 def respond(reply: str, calls=()):
-    return jsonify({"reply": reply, "tool_calls": list(calls)})
+    calls = list(calls)
+    for c in calls:
+        args_text = json.dumps(c.get("args", {}))
+        over = c["name"] == "generate" and int(c.get("args", {}).get("count", 0)) > 20000
+        _emit("tool_call", tool=c["name"], mutating=bool(c.get("mutating")),
+              args=c.get("args", {}), honey=_honey(args_text), over_budget=over)
+    _emit("agent_reply", length=len(reply), honey=_honey(reply))
+    return jsonify({"reply": reply, "tool_calls": calls})
 
 
 @app.get("/")
@@ -85,6 +123,7 @@ def chat():
     body = request.get_json(silent=True) or {}
     msg = str(body.get("message", ""))
     channel = str(body.get("channel", "direct"))
+    _emit("inbound_message", channel=channel, length=len(msg))
     ext = str(body.get("email") or body.get("doc") or (msg if channel in ("email", "doc") else ""))
     low = msg.lower()
     order = tok("order", "record")

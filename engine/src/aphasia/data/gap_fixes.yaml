@@ -1,0 +1,28 @@
+# Detection-gap remediation, keyed by tool or event. `aphasia detect` fills a gap's `fix` from here.
+# "missing" (no telemetry) prefers the log-source fix; "silent" (no rule) prefers the rule fix.
+default:
+  missing: "Add a log source for this step and ship it to Wazuh."
+  silent: "Write a Wazuh rule for this telemetry (see deploy/wazuh/aphasia_rules.xml for the pattern)."
+by_tool:
+  issue_refund:
+    silent: "Alert on issue_refund to a payee not on the known-payees CDB list (rule 100210)."
+    missing: "Log every issue_refund tool call with its args; ship to Wazuh."
+  send_email:
+    silent: "Alert on send_email to an unknown recipient or with a honey token in the body (100240/100220)."
+    missing: "Ship egress / outbound-tool logs to Wazuh; alert on agent egress to unseen hosts/recipients."
+  read_record:
+    silent: "Alert on bulk read_record of honey record IDs (CDB list of canary ids)."
+    missing: "Log read_record calls with the requested id; ship to Wazuh."
+  generate:
+    silent: "Alert on generation over the cost budget (rule 100250)."
+    missing: "Log token/cost markers per generation; ship to Wazuh."
+  search:
+    silent: "Log caller vs document owner on retrieval; alert on an ACL mismatch."
+    missing: "Add retrieval/RAG access logs with caller and document owner."
+by_event:
+  agent_reply:
+    silent: "Alert on a honey credential string appearing in an agent reply (rule 100340, proxy mode)."
+    missing: "Capture agent replies at the gateway (proxy mode) so leaks are visible."
+  mcp_tools_list:
+    silent: "Alert when an MCP tool description hash changes since approval (rule 100230)."
+    missing: "Log MCP tools/list with per-tool description hashes."

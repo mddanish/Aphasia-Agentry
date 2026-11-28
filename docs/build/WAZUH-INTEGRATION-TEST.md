@@ -21,12 +21,12 @@ Full Wazuh setup steps and credentials are in [WAZUH.md](WAZUH.md); this file is
 | CDB lists + `wazuh-logtest` samples | ready | Stage B |
 | Attack engine, canaries, evidence log (`aphasia run`) | ready | Stage C |
 | Proxy recorder `aphasia/proxy/recorder.py` | ready | Stage E |
-| **Fixture telemetry logging** (`$APHASIA_LOG`) | **build (SPEC §3–4, Phase 1)** | Stage C→D |
-| **`aphasia detect`** (Wazuh correlation) | **build (SPEC §5, Phase 3)** | Stage D |
+| Fixture telemetry logging (`$APHASIA_LOG`) + `X-Aphasia-*` headers | ready (Phase 1) | Stage C→D |
+| `aphasia detect` (Wazuh correlation) | ready (Phase 3) | Stage D |
 | **`aphasia proxy`** command + lab LLM agent | **build (SPEC §9–10, Phase 4–5)** | Stage E |
 
-Stages A, B and the manual half of C run now. D and E need the Phase 1/3/4/5 code (prompts in
-[PLAN.md](PLAN.md)). Build those in the VM with Claude Code, then re-run D and E.
+Stages A–D run now (Phase 1 + 3 are built). Stage E (proxy) needs the Phase 4/5 code
+(prompts in [PLAN.md](PLAN.md)). Build those in the VM with Claude Code, then run E.
 
 ## Stage A — bring Wazuh up
 
@@ -71,8 +71,13 @@ cd engine && uv sync && uv run aphasia run --mode seed
 Pass when the report shows canary-proven findings (indirect_injection, data_exfil,
 mcp_tool_poisoning, tool_misuse, …). This is the attacker + proof half — already green.
 
-**To feed Wazuh you need fixture telemetry (Phase 1).** Until built, inject one line by hand to
-prove the pipe:
+The fixture now writes telemetry to `$APHASIA_LOG` when set (Phase 1). Point it at the mounted log:
+
+```bash
+export APHASIA_LOG="$APHASIA_REPO/fixture/logs/fixture.jsonl"   # set in fixture/docker-compose.override.yml
+```
+
+To prove the Wazuh pipe without a full run, inject one line by hand:
 
 ```bash
 echo '{"ts":"2026-12-04T10:15:04Z","source":"aphasia-fixture","component":"agent","event":"tool_call","tool":"issue_refund","mutating":true,"args":{"order_id":"x","payee":"unknown-1"},"honey":true,"session":"t"}' \
@@ -83,13 +88,13 @@ curl -sk -u admin:SecretPassword "https://localhost:9200/wazuh-alerts-4.x-*/_sea
 
 Pass when the indexer returns a rule 100210 alert for that line.
 
-## Stage D — automated detection-gap (after Phase 1 + 3)
+## Stage D — automated detection-gap (ready)
 
 ```bash
 export APHASIA_WAZUH_URL=https://<vm>:9200
 read -rs APHASIA_WAZUH_PASSWORD && export APHASIA_WAZUH_PASSWORD
 cd "$APHASIA_REPO/engine"
-uv run aphasia run --mode seed            # fixture now logs telemetry (Phase 1)
+uv run aphasia run --mode seed            # fixture logs telemetry; engine tags X-Aphasia-* headers
 sleep 20
 uv run aphasia detect --run runs/<id> --insecure
 uv run aphasia tui --run runs/<id>        # sections 3 Steps, 6 Gaps now populated
