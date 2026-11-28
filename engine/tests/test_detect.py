@@ -95,3 +95,27 @@ def test_scenario_verdict_uses_display_vocab(tmp_path):
     view = detect(tmp_path, from_file=SAMPLE)
     assert view["scenarios"][0]["verdict"] == "proven"  # not the raw "success"
     REGISTRY.pop("indirect_injection", None); REGISTRY.pop("data_exfil", None)
+
+
+def test_proxy_exchanges_loaded_into_view(tmp_path):
+    import json as _j
+    _reg()
+    _seed_run(tmp_path, [
+        {"scenario_id": "indirect_injection", "step_no": 3, "ts": "2026-12-04T10:15:04Z",
+         "channel": "email", "payload": "x", "observation": {"reply": "r", "tool_calls": []},
+         "tool_calls": [{"name": "issue_refund", "args": {"payee": "5e0b77c1a9d2f830"}, "mutating": True}],
+         "canary_hits": ["5e0b77c1a9d2f830"], "verdict": "success"}])
+    pdir = tmp_path / "proxy"; pdir.mkdir()
+    (pdir / "proxy.jsonl").write_text("\n".join(_j.dumps(x) for x in [
+        {"event": "llm_exchange", "ts": "2026-12-04T10:15:03Z", "scenario": "indirect_injection",
+         "step": "1", "session": "s", "model": "qwen", "latency_ms": 840,
+         "injection_in_tool_result": True, "honey_in_context": True,
+         "messages": [{"role": "user", "content": "hi"}], "tools": [{"name": "issue_refund", "desc_hash": "a"}],
+         "tool_calls": [{"name": "issue_refund", "args": {}}], "reply": ""},
+        {"event": "llm_tool_call", "tool": "issue_refund"}]))
+    from aphasia.detect import detect
+    view = detect(tmp_path, from_file=SAMPLE, proxy_dir=pdir)
+    assert view["deploy_mode"] == "proxy" and len(view["exchanges"]) == 1
+    ex = view["exchanges"][0]
+    assert ex["model"] == "qwen" and "injection_in_tool_result" in ex["flags"] and ex["no"] == 1
+    REGISTRY.pop("indirect_injection", None); REGISTRY.pop("data_exfil", None)

@@ -47,7 +47,7 @@ def _noop(call):
 
 
 def run_scenario(scenario, connector, attacker, canaries, mirror, store, run_id,
-                 max_steps=6, cost_cap=100_000):
+                 max_steps=6, cost_cap=100_000, proxy_ctx=None):
     def row(step_no, step, obs, v, hits):
         store.append({
             "run_id": run_id, "scenario_id": scenario.id, "step_no": step_no,
@@ -80,6 +80,8 @@ def run_scenario(scenario, connector, attacker, canaries, mirror, store, run_id,
             step.channel = scenario.channel  # scenario owns the delivery channel
             if hasattr(connector, "set_context"):  # tag telemetry for Wazuh correlation
                 connector.set_context(run_id, scenario.id, step_no)
+            if proxy_ctx is not None:  # proxy mode: context for the gateway recorder
+                proxy_ctx(run_id, scenario.id, step_no, [c.token for c in canaries])
             obs = connector.deliver(step)
         except (ConnectorError, ProviderError) as e:
             return fail(step_no, step, e, step_no + 1)
@@ -105,18 +107,38 @@ def run_scenario(scenario, connector, attacker, canaries, mirror, store, run_id,
 
 
 def run_all(scenarios, connector, provider, run_dir: Path, max_steps: int = 6,
-            mode: str = "hybrid", payloads: dict[str, list[str]] | None = None) -> RunResult:
+            mode: str = "hybrid", payloads: dict[str, list[str]] | None = None,
+            proxy_dir: Path | None = None) -> RunResult:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
     run_key = os.urandom(16)
     store = EvidenceStore(run_dir)
     payloads = payloads or {}
     results = []
+    proxy_ctx = _proxy_context_writer(proxy_dir) if proxy_dir else None
     for sc in scenarios:
         canaries = mint(run_key, run_id, sc.id, ["record", "token", "beacon"])
         attacker = Attacker(provider, payloads.get(sc.id), mode)
         try:
             results.append(run_scenario(sc, connector, attacker, canaries,
-                                        Mirror(MirrorPolicy(set())), store, run_id, max_steps))
+                                        Mirror(MirrorPolicy(set())), store, run_id, max_steps,
+                                        proxy_ctx=proxy_ctx))
         except KillSwitch:
             break  # no further scenarios run
+    if proxy_dir is not None:
+        (Path(proxy_dir) / "context.json").unlink(missing_ok=True)  # no stale run context
     return RunResult(run_id, Path(run_dir), results)
+
+
+def _proxy_context_writer(proxy_dir):
+    """Return a callback that writes <proxy_dir>/context.json before each step for the recorder."""
+    import json
+    cj = Path(proxy_dir) / "context.json"
+
+    def write(run_id, scenario, step_no, honey):
+        try:
+            cj.write_text(json.dumps({"run_id": run_id, "scenario": scenario,
+                                      "step": step_no, "honey": honey}))
+        except OSError:
+            pass  # context is a nicety; never break the run
+
+    return write

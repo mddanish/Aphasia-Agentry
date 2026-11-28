@@ -1,0 +1,17 @@
+# Copy to fixture/docker-compose.override.yml to add the proxy-mode LLM agent (127.0.0.1:8002).
+# Start the proxy first (`aphasia proxy start`), then set these before `docker compose up -d`:
+#   OPENAI_BASE_URL=http://host.docker.internal:4000/v1  OPENAI_API_KEY=<proxy key>  AGENT_MODEL=agent-model
+services:
+  llm-agent:
+    build: ./llm-agent
+    ports:
+      - "127.0.0.1:8002:8080"
+    environment:
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://host.docker.internal:4000/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy}
+      AGENT_MODEL: ${AGENT_MODEL:-agent-model}
+      APHASIA_LOG: /logs/fixture.jsonl
+    volumes:
+      - ./logs:/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

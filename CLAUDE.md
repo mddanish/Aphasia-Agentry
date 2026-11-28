@@ -15,10 +15,10 @@ Specs: `docs/build/SPEC.md` (contracts), `docs/build/TUI_STYLE.md` (look), `docs
 - `engine/src/aphasia/catalog.py` + `data/catalog.yaml` — merged technique taxonomy + scan selection (done)
 - `engine/src/aphasia/tui/` — Textual TUI (starter: layout and theme are the visual baseline; `setup.py` wizard done)
 - `engine/src/aphasia/detect/` — Wazuh correlation (`aphasia detect`, done)
-- `engine/src/aphasia/proxy/` — proxy mode: `recorder.py` (done) + `aphasia proxy` (to build)
+- `engine/src/aphasia/proxy/` — proxy mode: `recorder.py` + `control.py` (`aphasia proxy start/status/stop`, done)
 - fixture telemetry: `fixture/agent/app.py` writes JSON lines to `$APHASIA_LOG`; engine sends `X-Aphasia-*` headers (done)
 - `deploy/proxy/` — LiteLLM config template
-- `fixture/` — deliberately vulnerable agent (Flask) + MCP server, Docker, localhost only
+- `fixture/` — vulnerable scripted agent + MCP server; `fixture/llm-agent/` real LLM agent for proxy mode (Flask, Docker, localhost only)
 - `deploy/wazuh/` — rules 1002xx (direct) and 1003xx (proxy), CDB lists, samples, compose override
 
 ## Commands

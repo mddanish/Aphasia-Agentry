@@ -147,8 +147,38 @@ def _action(step: dict) -> str:
     return (step.get("payload") or "inbound message")[:60]
 
 
+_FLAG_KEYS = ("injection_in_tool_result", "honey_in_context", "honey_in_reply", "desc_changed")
+
+
+def _load_exchanges(proxy_dir: Path | None) -> list[dict]:
+    """Build run_view.exchanges from <proxy_dir>/proxy.jsonl (recorder llm_exchange lines)."""
+    if not proxy_dir:
+        return []
+    pj = Path(proxy_dir) / "proxy.jsonl"
+    if not pj.exists():
+        return []
+    out, n = [], 0
+    for line in pj.read_text().splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if e.get("event") != "llm_exchange":
+            continue
+        n += 1
+        out.append({
+            "no": n, "ts": _short_ts(e.get("ts", "")), "scenario": e.get("scenario", ""),
+            "step": e.get("step", ""), "session": e.get("session", ""), "model": e.get("model", ""),
+            "latency_ms": e.get("latency_ms", 0),
+            "flags": [k for k in _FLAG_KEYS if e.get(k)],
+            "messages": e.get("messages", []), "tools": e.get("tools", []),
+            "tool_calls": e.get("tool_calls", []), "reply": e.get("reply", ""),
+        })
+    return out
+
+
 def build_view(run_dir: Path, alerts: list[dict], min_level: int, before: int, after: int,
-               siem: str = "wazuh") -> dict:
+               siem: str = "wazuh", proxy_dir: Path | None = None) -> dict:
     rows = EvidenceStore(run_dir).read()
     meta = {s.id: s for s in load_yaml(SCENARIOS)}
     catalog = _catalog_by_scenario()
@@ -160,14 +190,17 @@ def build_view(run_dir: Path, alerts: list[dict], min_level: int, before: int, a
         result, alert = _classify(r, matched, min_level)
         tool = r["tool_calls"][0]["name"] if r.get("tool_calls") else "-"
         telemetry = bool(matched)
-        steps_view.append({
+        step_view = {
             "scenario": r["scenario_id"], "no": r["step_no"] + 1, "ts": _short_ts(r.get("ts", "")),
             "action": _action(r), "tool": tool, "blocked": r.get("verdict") == "blocked",
             "telemetry": telemetry,
             "alert": ({"rule": alert["rule"].get("id"), "level": int(alert["rule"].get("level", 0)),
                        "desc": alert["rule"].get("description", "")} if alert else None),
             "result": result,
-        })
+        }
+        if alert and str(alert["rule"].get("id", "")).startswith("1003"):
+            step_view["gateway"] = alert["rule"].get("description", "")
+        steps_view.append(step_view)
         by_scenario_rows.setdefault(r["scenario_id"], []).append(r)
 
     # per-scenario verdicts (last row wins; success if any success row)
@@ -210,13 +243,14 @@ def build_view(run_dir: Path, alerts: list[dict], min_level: int, before: int, a
     gaps = [{"rank": g["rank"], "title": g["title"], "kind": g["kind"], "severity": g["severity"],
              "covers": g["covers"], "fix": g["fix"]} for g in gaps]
 
+    exchanges = _load_exchanges(proxy_dir)
     any_row = rows[0] if rows else {}
     started = _short_ts(any_row.get("ts", ""))
     return {
         "run_id": any_row.get("run_id", run_dir.name), "started": started,
         "target": f"{any_row.get('target_identity', '')} · {any_row.get('target_host', '')}".strip(" ·"),
         "mode": "seed", "duration_min": 0, "siem": siem,
-        "deploy_mode": "direct", "exchanges": [],
+        "deploy_mode": "proxy" if exchanges else "direct", "exchanges": exchanges,
         "scenarios": scenarios_view, "steps": steps_view, "gaps": gaps,
     }
 
@@ -229,7 +263,8 @@ def _gap_title(sv: dict, kind: str) -> str:
 
 # ---------- entry point ----------
 def detect(run_dir: Path, from_file: Path | None = None, insecure: bool = False,
-           window_before: int = 5, window_after: int = 90, min_level: int = 7) -> dict:
+           window_before: int = 5, window_after: int = 90, min_level: int = 7,
+           proxy_dir: Path | None = None) -> dict:
     run_dir = Path(run_dir)
     rows = EvidenceStore(run_dir).read()
     if not rows:
@@ -249,7 +284,8 @@ def detect(run_dir: Path, from_file: Path | None = None, insecure: bool = False,
         alerts = _fetch_alerts(c, lo.isoformat(), hi.isoformat(), insecure)
         siem = f"wazuh · {c.wazuh.indexer_url}"
 
-    view = build_view(run_dir, alerts, min_level, window_before, window_after, siem=siem)
+    view = build_view(run_dir, alerts, min_level, window_before, window_after, siem=siem,
+                      proxy_dir=proxy_dir)
 
     detections = [{"scenario": s["scenario"], "step_no": s["no"], "result": s["result"],
                    "alerts": ([{"rule_id": s["alert"]["rule"], "level": s["alert"]["level"],

@@ -75,11 +75,35 @@ def _attacker(a) -> LiteLLMProvider:
     return LiteLLMProvider(model=model, api_base=base, api_key=key)
 
 
+def _proxy(a) -> int:
+    from aphasia.proxy import control
+    c = config.load()
+    if a.proxy_cmd == "status":
+        st = control.status(c)
+        print(json.dumps(st, indent=2))
+        return 0 if st.get("running") else 1
+    if a.proxy_cmd == "stop":
+        print(json.dumps(control.stop(c), indent=2))
+        return 0
+    try:
+        s = control.start(c, provider_model=a.provider_model or "", api_base=a.api_base or "",
+                          alias=a.alias or "", listen=a.listen or "", full=a.full)
+    except (ValueError, RuntimeError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    print("proxy up — point the agent under test at:")
+    print(f"  OpenAI-compatible:    base_url={s['base_url']}   api_key={s['api_key']}   model={s['model']}")
+    print(f"  Anthropic-compatible: ANTHROPIC_BASE_URL={s['anthropic_base']}   ANTHROPIC_API_KEY={s['api_key']}")
+    print(f"  pid {s['pid']} · logs {s['dir']}/proxy.jsonl · stop with `aphasia proxy stop`")
+    return 0
+
+
 def _detect(a) -> int:
     from aphasia.detect import detect
     try:
         view = detect(Path(a.run), Path(a.from_file) if a.from_file else None, insecure=a.insecure,
-                      window_before=a.window_before, window_after=a.window_after, min_level=a.min_level)
+                      window_before=a.window_before, window_after=a.window_after, min_level=a.min_level,
+                      proxy_dir=Path(a.proxy) if getattr(a, "proxy", None) else None)
     except (OSError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -164,7 +188,9 @@ def _run(a) -> int:
         connector = _connector(a.target)
         # run_id is generated inside run_all, so default out is a fresh timestamped dir
         out = Path(a.out) if a.out else Path("runs") / time.strftime("%Y%m%dT%H%M%S")
-        res = run_all(scs, connector, provider, out, a.max_steps, mode=a.mode, payloads=payloads)
+        pdir = Path(a.proxy) if getattr(a, "proxy", None) else None
+        res = run_all(scs, connector, provider, out, a.max_steps, mode=a.mode, payloads=payloads,
+                      proxy_dir=pdir)
     except (ProviderError, ConnectorError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -229,6 +255,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="max attacker steps per scenario [default: 6]")
     r.add_argument("--out", metavar="DIR",
                    help="output dir for report + evidence [default: runs/<timestamp>]")
+    r.add_argument("--proxy", metavar="DIR",
+                   help="proxy mode: write run context into this proxy dir (e.g. runs/proxy) so the "
+                        "gateway recorder tags each LLM exchange")
 
     cat = sub.add_parser("catalog", help="list the merged technique taxonomy (AATMF + Arcanum + ZeroLeaks)",
                          description="Print techniques by category, which scenario tests each, and which "
@@ -245,6 +274,19 @@ def main(argv: list[str] | None = None) -> int:
     tu.add_argument("--run", metavar="DIR", help="run directory with run_view.json")
     tu.add_argument("--demo", action="store_true", help="bundled demo data, skip setup")
 
+    px = sub.add_parser("proxy", help="run the LLM gateway (proxy mode) in its own env",
+                        description="start/status/stop the LiteLLM gateway with the Aphasia recorder. "
+                                    "Uses only [upstream] + APHASIA_UPSTREAM_API_KEY.")
+    pxs = px.add_subparsers(dest="proxy_cmd", required=True, metavar="<action>")
+    ps = pxs.add_parser("start", help="start the gateway and print the agent settings")
+    ps.add_argument("--provider-model", metavar="MODEL", help="upstream model, e.g. ollama_chat/qwen2.5:7b-instruct")
+    ps.add_argument("--api-base", metavar="URL", help="upstream base URL (local/self-hosted providers)")
+    ps.add_argument("--alias", metavar="NAME", help="model name the agent asks for [agent-model]")
+    ps.add_argument("--listen", metavar="HOST:PORT", help="bind address [127.0.0.1:4000]")
+    ps.add_argument("--full", action="store_true", help="log full text (no 2000-char clipping)")
+    pxs.add_parser("status", help="is the gateway running?")
+    pxs.add_parser("stop", help="stop the gateway")
+
     dt = sub.add_parser("detect", help="correlate a run's evidence with Wazuh alerts (detection gaps)",
                         description="For each attack step, check whether Wazuh detected it; write "
                                     "detections.json and run_view.json for the TUI.")
@@ -254,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
     dt.add_argument("--window-before", type=int, default=5, metavar="MIN", help="minutes before a step [5]")
     dt.add_argument("--window-after", type=int, default=90, metavar="SEC", help="seconds after a step [90]")
     dt.add_argument("--min-level", type=int, default=7, metavar="N", help="min Wazuh level counted as detected [7]")
+    dt.add_argument("--proxy", metavar="DIR", help="proxy dir (reads proxy.jsonl into the TUI Trace view)")
 
     rp = sub.add_parser("report", help="re-render a report from a past run's evidence",
                         description="Rebuild report.html/report.json from <run-dir>/evidence.jsonl.")
@@ -280,6 +323,8 @@ def main(argv: list[str] | None = None) -> int:
         return _catalog(a)
     if a.cmd == "detect":
         return _detect(a)
+    if a.cmd == "proxy":
+        return _proxy(a)
     if a.cmd == "setup":
         return _setup(a)
     if a.cmd == "config":

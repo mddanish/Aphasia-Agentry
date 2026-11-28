@@ -1,12 +1,29 @@
+import importlib.util
 import sys
 from pathlib import Path
 
 import pytest
 
-# Make the Flask fixture agent importable as `app` for telemetry tests.
-_FIXTURE_AGENT = Path(__file__).resolve().parents[2] / "fixture" / "agent"
-if _FIXTURE_AGENT.is_dir() and str(_FIXTURE_AGENT) not in sys.path:
-    sys.path.insert(0, str(_FIXTURE_AGENT))
+_FIXTURE = Path(__file__).resolve().parents[2] / "fixture"
+
+
+def _load(mod_name: str, path: Path):
+    """Load a fixture app.py under a unique module name (both fixtures define `app`)."""
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.fixture
+def fixture_agent():
+    return _load("fixture_agent_app", _FIXTURE / "agent" / "app.py")
+
+
+@pytest.fixture
+def fixture_llm_agent():
+    return _load("fixture_llm_agent_app", _FIXTURE / "llm-agent" / "app.py")
 
 
 @pytest.fixture(autouse=True)

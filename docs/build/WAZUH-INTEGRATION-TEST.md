@@ -23,10 +23,10 @@ Full Wazuh setup steps and credentials are in [WAZUH.md](WAZUH.md); this file is
 | Proxy recorder `aphasia/proxy/recorder.py` | ready | Stage E |
 | Fixture telemetry logging (`$APHASIA_LOG`) + `X-Aphasia-*` headers | ready (Phase 1) | Stage C→D |
 | `aphasia detect` (Wazuh correlation) | ready (Phase 3) | Stage D |
-| **`aphasia proxy`** command + lab LLM agent | **build (SPEC §9–10, Phase 4–5)** | Stage E |
+| `aphasia proxy` command + `fixture/llm-agent` | ready (Phase 4+5) | Stage E |
 
-Stages A–D run now (Phase 1 + 3 are built). Stage E (proxy) needs the Phase 4/5 code
-(prompts in [PLAN.md](PLAN.md)). Build those in the VM with Claude Code, then run E.
+Stages A–E are all built. Stage E needs a tool-calling model behind the proxy (Ollama
+`qwen2.5:7b-instruct`, or a hosted model) and the lab agent container; see below.
 
 ## Stage A — bring Wazuh up
 
@@ -103,15 +103,19 @@ uv run aphasia tui --run runs/<id>        # sections 3 Steps, 6 Gaps now populat
 Pass when a run yields **≥3 detected, ≥3 silent, ≥1 no-telemetry**, and `detect --from-file
 deploy/wazuh/samples/indexer_search_response.json` works offline for a repeatable check.
 
-## Stage E — proxy mode (after Phase 4 + 5)
+## Stage E — proxy mode (ready)
 
 ```bash
 cd "$APHASIA_REPO/engine"
 uv run aphasia setup                      # enable proxy, set upstream model/key
+uv run aphasia setup                      # enable proxy, set upstream model + key
 uv run aphasia proxy start --provider-model ollama_chat/qwen2.5:7b-instruct
-# point the lab LLM agent's LLM base URL at the proxy, then:
+# bring up the lab agent pointed at the proxy (copy the override, set the printed key):
+cp ../fixture/llm-agent/docker-compose.override.yml ../fixture/docker-compose.override.yml
+OPENAI_API_KEY=<proxy key> docker compose -f ../fixture/docker-compose.yml up -d llm-agent
 uv run aphasia run --mode seed --target http://127.0.0.1:8002/chat --proxy runs/proxy
-uv run aphasia detect --run runs/<id> --insecure
+uv run aphasia detect --run runs/<id> --insecure --proxy runs/proxy
+uv run aphasia proxy stop
 ```
 
 Pass when the prompt-leak and tool-output-injection steps move from **silent** (direct) to
