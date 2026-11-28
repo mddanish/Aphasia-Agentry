@@ -84,8 +84,10 @@ def _parse_ts(s: str) -> datetime | None:
         return None
 
 
-def _match(step: dict, alerts: list[dict], before: int, after: int) -> list[dict]:
-    """Alerts belonging to this evidence step. Strong: run_id+scenario+step; fallback: tool + time."""
+def _match(step: dict, alerts: list[dict], before: int, after: int,
+           claimed: set | None = None) -> list[dict]:
+    """Alerts belonging to this evidence step. Strong: run_id+scenario+step; fallback: tool + time.
+    `claimed` de-duplicates fallback matches so one alert is not counted by two steps."""
     rid, sid, sn = str(step["run_id"]), str(step["scenario_id"]), str(step["step_no"])
     strong = [a for a in alerts if str(a["data"].get("run_id")) == rid
               and str(a["data"].get("scenario")) == sid and str(a["data"].get("step")) == sn]
@@ -99,11 +101,14 @@ def _match(step: dict, alerts: list[dict], before: int, after: int) -> list[dict
     for a in alerts:
         if a["data"].get("tool") not in tools:
             continue
+        if claimed is not None and id(a) in claimed:
+            continue  # already attributed to an earlier step
         at = _parse_ts(a["ts"])
-        if t0 and at and (t0 - timedelta(minutes=before)) <= at <= (t0 + timedelta(seconds=after)):
+        if (t0 and at and (t0 - timedelta(minutes=before)) <= at <= (t0 + timedelta(seconds=after))) \
+                or not t0:
             win.append(a)
-        elif not t0:
-            win.append(a)
+    if claimed is not None:
+        claimed.update(id(a) for a in win)
     return win
 
 
@@ -184,9 +189,9 @@ def build_view(run_dir: Path, alerts: list[dict], min_level: int, before: int, a
     catalog = _catalog_by_scenario()
 
     # per-step results
-    steps_view, by_scenario_rows = [], {}
+    steps_view, by_scenario_rows, claimed = [], {}, set()
     for r in rows:
-        matched = _match(r, alerts, before, after)
+        matched = _match(r, alerts, before, after, claimed)
         result, alert = _classify(r, matched, min_level)
         tool = r["tool_calls"][0]["name"] if r.get("tool_calls") else "-"
         telemetry = bool(matched)
@@ -233,9 +238,11 @@ def build_view(run_dir: Path, alerts: list[dict], min_level: int, before: int, a
             continue
         kind = "log source" if sv["result"] == "missing" else "rule"
         sev = _severity(verdict_of[sid], meta[sid].category if sid in meta else "")
+        tool = sv["tool"] if sv["tool"] != "-" else ""
+        event = "agent_reply" if not tool else ""   # a tool-less step is a reply gap (rule 100340)
         gaps.append({"severity": sev, "kind": kind,
                      "covers": f"{sid} #{sv['no']}", "title": _gap_title(sv, kind),
-                     "fix": _gap_fix(sv["tool"] if sv["tool"] != "-" else "", "", kind),
+                     "fix": _gap_fix(tool, event, kind),
                      "_order": (SEV_ORDER.get(sev, 9), 0 if sv["result"] == "missing" else 1)})
     gaps.sort(key=lambda g: g.pop("_order"))
     for i, g in enumerate(gaps, 1):

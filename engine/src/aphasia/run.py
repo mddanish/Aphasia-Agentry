@@ -115,17 +115,19 @@ def run_all(scenarios, connector, provider, run_dir: Path, max_steps: int = 6,
     payloads = payloads or {}
     results = []
     proxy_ctx = _proxy_context_writer(proxy_dir) if proxy_dir else None
-    for sc in scenarios:
-        canaries = mint(run_key, run_id, sc.id, ["record", "token", "beacon"])
-        attacker = Attacker(provider, payloads.get(sc.id), mode)
-        try:
-            results.append(run_scenario(sc, connector, attacker, canaries,
-                                        Mirror(MirrorPolicy(set())), store, run_id, max_steps,
-                                        proxy_ctx=proxy_ctx))
-        except KillSwitch:
-            break  # no further scenarios run
-    if proxy_dir is not None:
-        (Path(proxy_dir) / "context.json").unlink(missing_ok=True)  # no stale run context
+    try:
+        for sc in scenarios:
+            canaries = mint(run_key, run_id, sc.id, ["record", "token", "beacon"])
+            attacker = Attacker(provider, payloads.get(sc.id), mode)
+            try:
+                results.append(run_scenario(sc, connector, attacker, canaries,
+                                            Mirror(MirrorPolicy(set())), store, run_id, max_steps,
+                                            proxy_ctx=proxy_ctx))
+            except KillSwitch:
+                break  # no further scenarios run
+    finally:
+        if proxy_dir is not None:  # never leave stale run context (honey tokens) behind
+            (Path(proxy_dir) / "context.json").unlink(missing_ok=True)
     return RunResult(run_id, Path(run_dir), results)
 
 

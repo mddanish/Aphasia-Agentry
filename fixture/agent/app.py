@@ -43,10 +43,23 @@ app = Flask(__name__)
 # Telemetry: append one JSON line per event to $APHASIA_LOG (unset = no logging, so tests are
 # unchanged). The fixture writes only to this configured path, never an attacker-chosen one.
 _LOG = os.environ.get("APHASIA_LOG")
+_LOG_FH = None            # one line-buffered append handle, reopened only if _LOG changes
+_LOG_PATH = None
+
+
+def _handle():
+    global _LOG_FH, _LOG_PATH
+    if _LOG != _LOG_PATH:
+        if _LOG_FH:
+            _LOG_FH.close()
+        _LOG_FH = open(_LOG, "a", buffering=1) if _LOG else None
+        _LOG_PATH = _LOG
+    return _LOG_FH
 
 
 def _emit(event: str, **fields) -> None:
-    if not _LOG:
+    f = _handle()
+    if f is None:
         return
     h = request.headers
     rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -58,8 +71,7 @@ def _emit(event: str, **fields) -> None:
             rec[k] = h.get(v)
     rec.update(fields)
     try:
-        with open(_LOG, "a") as f:
-            f.write(json.dumps(rec) + "\n")
+        f.write(json.dumps(rec) + "\n")
     except OSError:
         pass  # logging must never break the fixture
 

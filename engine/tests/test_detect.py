@@ -119,3 +119,17 @@ def test_proxy_exchanges_loaded_into_view(tmp_path):
     ex = view["exchanges"][0]
     assert ex["model"] == "qwen" and "injection_in_tool_result" in ex["flags"] and ex["no"] == 1
     REGISTRY.pop("indirect_injection", None); REGISTRY.pop("data_exfil", None)
+
+
+def test_match_fallback_dedups_one_alert_across_steps():
+    from aphasia.detect.wazuh import _match
+    a = {"ts": "2026-12-04T10:15:20Z", "rule": {"id": "100240", "level": 10}, "data": {"tool": "send_email"}}
+    alerts = [a]
+    claimed = set()
+    s1 = {"run_id": "X", "scenario_id": "a", "step_no": 0, "ts": "2026-12-04T10:15:20Z",
+          "tool_calls": [{"name": "send_email"}]}
+    s2 = {"run_id": "X", "scenario_id": "b", "step_no": 0, "ts": "2026-12-04T10:15:21Z",
+          "tool_calls": [{"name": "send_email"}]}
+    m1 = _match(s1, alerts, 5, 90, claimed)
+    m2 = _match(s2, alerts, 5, 90, claimed)
+    assert m1 == [a] and m2 == []   # the single alert is claimed by step 1, not double-counted

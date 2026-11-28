@@ -99,3 +99,60 @@ def test_run_proxy_writes_and_removes_context(tmp_path):
             payloads={"direct_injection": ["p"]}, proxy_dir=pdir)
     assert seen["ctx"]["scenario"] == "direct_injection" and "honey" in seen["ctx"]
     assert not (pdir / "context.json").exists()   # cleaned up after the run
+
+
+def test_wildcard_bind_uses_loopback_base_and_note(tmp_path, monkeypatch):
+    c = _cfg(tmp_path); c.proxy.listen = "0.0.0.0:4111"
+
+    class FakeProc:
+        pid = 1; returncode = None
+        def poll(self): return None
+    monkeypatch.setattr(control.shutil, "which", lambda x: "/usr/bin/uvx")
+    monkeypatch.setattr(control, "_health_ok", lambda base, timeout=1.5: True)
+    s = control.start(c, listen="0.0.0.0:4111", spawn=lambda *a, **k: FakeProc(), wait_s=2)
+    assert s["base_url"] == "http://127.0.0.1:4111/v1" and "note" in s  # not http://0.0.0.0
+
+
+def test_start_does_not_persist_flag_overrides(tmp_path, monkeypatch):
+    # fresh config home with no proxy key; start with a one-off model flag must not write it to config.toml
+    import tomllib
+    c = _cfg(tmp_path); c.secrets = {cfg.UPSTREAM_KEY: "sk-up"}  # no PROXY_KEY -> triggers save
+    monkeypatch.setattr(control.shutil, "which", lambda x: "/usr/bin/uvx")
+    monkeypatch.setattr(control, "_health_ok", lambda base, timeout=1.5: True)
+
+    class FakeProc:
+        pid = 2; returncode = None
+        def poll(self): return None
+    control.start(c, provider_model="ONE-OFF-MODEL", spawn=lambda *a, **k: FakeProc(), wait_s=2)
+    saved = tomllib.loads((cfg.home() / "config.toml").read_text())
+    assert saved.get("upstream", {}).get("model", "") != "ONE-OFF-MODEL"   # flag not persisted
+    assert cfg.load().secret(cfg.PROXY_KEY).startswith("sk-aphasia-")       # key persisted
+
+
+def test_stop_refuses_recycled_pid(tmp_path):
+    import os
+    c = _cfg(tmp_path)
+    d = Path(c.proxy.dir); d.mkdir(parents=True)
+    (d / "proxy.pid").write_text(str(os.getpid()))   # alive but not the litellm proxy
+    res = control.stop(c)
+    assert res["stopped"] is False and "recycled" in res["reason"]
+    assert not (d / "proxy.pid").exists()             # stale pid file cleared
+
+
+def test_run_proxy_context_removed_on_unexpected_exception(tmp_path):
+    import pytest as _pt
+    from aphasia.run import run_all
+    from aphasia.scenarios import Scenario
+    pdir = tmp_path / "proxy"; pdir.mkdir()
+
+    class Boom:
+        host = "h"; identity = "i"
+        def plant(self, c): pass
+        def set_context(self, *a): pass
+        def deliver(self, step): raise ValueError("kaboom")   # not Connector/ProviderError
+
+    sc = Scenario("direct_injection", "Direct prompt injection", "direct", "g", "s", "", "LLM01")
+    with _pt.raises(ValueError):
+        run_all([sc], Boom(), None, tmp_path / "run", max_steps=1, mode="seed",
+                payloads={"direct_injection": ["p"]}, proxy_dir=pdir)
+    assert not (pdir / "context.json").exists()   # finally-block cleanup ran

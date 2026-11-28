@@ -72,7 +72,11 @@ def _ensure_proxy_key(c: cfg.Config) -> str:
         return key
     key = "sk-aphasia-" + pysecrets.token_urlsafe(18)
     c.secrets[cfg.PROXY_KEY] = key
-    cfg.save(c)  # persist to secrets.env
+    # Persist ONLY the new key, never the caller's one-off flag overrides: save a freshly loaded
+    # config with the key added, so config.toml keeps its stored (non-override) values.
+    stored = cfg.load()
+    stored.secrets[cfg.PROXY_KEY] = key
+    cfg.save(stored)
     return key
 
 
@@ -119,18 +123,25 @@ def start(c: cfg.Config, *, provider_model: str = "", api_base: str = "", alias:
     proc = spawn(_uvx_cmd(cfg_path, host, port), env=env, stdout=logf, stderr=subprocess.STDOUT)
     (d / "proxy.pid").write_text(str(proc.pid))
 
-    base = c.proxy.url
+    # Always probe the loopback: a GET to 0.0.0.0 fails as a client even when the proxy is healthy.
+    local_base = f"http://127.0.0.1:{port}"
     for _ in range(wait_s):
         if proc.poll() is not None:
             raise RuntimeError(f"proxy exited early (rc={proc.returncode}); see {d / 'proxy.out'}")
-        if _health_ok(base):
+        if _health_ok(local_base):
             break
         time.sleep(1)
     else:
         raise RuntimeError(f"proxy did not become healthy in {wait_s}s; see {d / 'proxy.out'}")
 
-    return {"base_url": f"{base}/v1", "anthropic_base": base, "api_key": proxy_key,
-            "model": c.proxy.alias, "pid": proc.pid, "dir": str(d)}
+    # The agent-facing base must be reachable: 0.0.0.0 is a bind wildcard, not a usable client host.
+    agent_host = "127.0.0.1" if host in ("127.0.0.1", "localhost", "0.0.0.0") else host
+    base = f"http://{agent_host}:{port}"
+    out = {"base_url": f"{base}/v1", "anthropic_base": base, "api_key": proxy_key,
+           "model": c.proxy.alias, "pid": proc.pid, "dir": str(d)}
+    if host == "0.0.0.0":
+        out["note"] = "bound 0.0.0.0 — replace 127.0.0.1 in base_url with this host's LAN IP for remote agents"
+    return out
 
 
 def status(c: cfg.Config) -> dict:
@@ -150,6 +161,9 @@ def stop(c: cfg.Config) -> dict:
     if not pidf.exists():
         return {"stopped": False, "reason": "no pid file"}
     pid = int(pidf.read_text().strip() or "0")
+    if pid and _pid_alive(pid) and not _is_proxy(pid):
+        pidf.unlink(missing_ok=True)   # stale pid now owned by another process; never kill it
+        return {"stopped": False, "reason": "pid no longer the proxy (recycled); cleared pid file", "pid": pid}
     if pid and _pid_alive(pid):
         try:
             os.kill(pid, signal.SIGTERM)
@@ -166,6 +180,18 @@ def stop(c: cfg.Config) -> dict:
                 pass
     pidf.unlink(missing_ok=True)
     return {"stopped": True, "pid": pid}
+
+
+def _is_proxy(pid: int) -> bool:
+    """True if the pid's command line looks like our litellm proxy (guards against a recycled pid).
+    On platforms without /proc, cannot tell — assume True so stop() still works."""
+    cl = Path(f"/proc/{pid}/cmdline")
+    if not cl.exists():
+        return True
+    try:
+        return "litellm" in cl.read_bytes().replace(b"\x00", b" ").decode("utf-8", "replace")
+    except OSError:
+        return True
 
 
 def _pid_alive(pid: int) -> bool:
